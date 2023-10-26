@@ -9,6 +9,8 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { ExceptionsFilter } from './common';
+import { AppController } from './app.controller';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
@@ -23,12 +25,17 @@ import { ExceptionsFilter } from './common';
       }),
       inject: [ConfigService],
     }),
+    ServeStaticModule.forRoot({
+      rootPath: `${__dirname}/../public`,
+      renderPath: '/',
+    }),
     AuthModule,
     SharedModule,
     UserModule,
     TransactionModule,
   ],
   providers: [
+    AppController,
     // Global Guard, Authentication check on all routers
     // { provide: APP_GUARD, useClass: AuthenticatedGuard },
     // Global Filter, Exception check
@@ -45,5 +52,6 @@ import { ExceptionsFilter } from './common';
       }),
     },
   ],
+  exports: [AppController]
 })
 export class AppModule {}

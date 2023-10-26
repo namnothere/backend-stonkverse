@@ -1,6 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
-import * as compression from 'compression';
-import * as session from 'express-session';
+import  compression from 'compression';
+import  session from 'express-session';
 import helmet from 'helmet';
 import * as passport from 'passport';
 

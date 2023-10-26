@@ -30,6 +30,10 @@ if (!process.env.DB_HOST) {
 
   const { db } = <{ db: string }>response;
   const MODEL_DIR = pathJoin(__dirname, '../src/entity', db);
+
+  console.log(`> Loading '${db}' database...`);
+  console.log(`> Model directory: ${MODEL_DIR}`);
+
   rimrafSync(`${MODEL_DIR}/*`);
 
   const generatorConfig = [
