@@ -1,5 +1,5 @@
-import type { config as base } from './envs/default';
-import type { config as production } from './envs/production';
+import type { config as base } from './env/default';
+import type { config as production } from './env/production';
 
 export type Objectype = Record<string, unknown>;
 export type Default = typeof base;

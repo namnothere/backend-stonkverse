@@ -10,7 +10,6 @@ import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { ExceptionsFilter } from './common';
 import { AppController } from './app.controller';
-import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
@@ -24,10 +23,6 @@ import { ServeStaticModule } from '@nestjs/serve-static';
         ...config.get<TypeOrmModuleOptions>('db'),
       }),
       inject: [ConfigService],
-    }),
-    ServeStaticModule.forRoot({
-      rootPath: `${__dirname}/../public`,
-      renderPath: '/',
     }),
     AuthModule,
     SharedModule,
@@ -52,6 +47,6 @@ import { ServeStaticModule } from '@nestjs/serve-static';
       }),
     },
   ],
-  exports: [AppController]
+  exports: [AppController],
 })
 export class AppModule {}
