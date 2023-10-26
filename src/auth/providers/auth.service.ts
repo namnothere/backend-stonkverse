@@ -17,7 +17,7 @@ import { User } from '../../user/entities';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
+import { hash, compare } from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
@@ -41,7 +41,8 @@ export class AuthService {
         message: MESSAGES.NOT_FOUND_USER,
       });
     }
-    const match = await bcrypt.compare(pass, user.password);
+    // const match = await bcrypt.compare(pass, user.password);
+    const match = await compare(pass, user.password);
     if (!match) {
       throw new ForbiddenException({
         statusCode: 403,
@@ -110,7 +111,8 @@ export class AuthService {
     const user = new User({
       ...input,
       // role: role,
-      password: await bcrypt.hash(input.password, 10),
+      // password: await bcrypt.hash(input.password, 10),
+      password: await hash(input.password, 10),
       // verification_code: makeId(6),
       // verification_time: Date.now() + convertMilliseconds(VERIFICATION_TIME),
     });
