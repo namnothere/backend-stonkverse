@@ -13,5 +13,5 @@ export const MESSAGES = {
   LOGIN_INCORRECT: 'login incorrect',
 
   USERNAME_ALREADY_EXIST: 'username already exist',
-  NOT_FOUND_USER: 'not found user',
+  USER_NOT_FOUND: 'user not found',
 };

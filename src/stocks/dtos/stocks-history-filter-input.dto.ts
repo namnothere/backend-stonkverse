@@ -1,8 +1,8 @@
 import { Type } from 'class-transformer';
 import { IsDate, IsOptional } from 'class-validator';
-import { Paging } from '../../shared/dtos';
+import { PaginationParamsDto } from '../../shared/dtos';
 
-export class StocksHistoryFilterInput extends Paging {
+export class StocksHistoryFilterInput extends PaginationParamsDto {
   @IsOptional()
   @IsDate()
   @Type(() => Date)
