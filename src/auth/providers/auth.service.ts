@@ -100,6 +100,19 @@ export class AuthService {
     };
   }
 
+  async logout(userId: string): Promise<BaseApiResponse<null>> {
+    await this.userRepo.update(userId, {
+      token() {
+        return 'null';
+      },
+    });
+    return {
+      status: RESULT_STATUS.SUCCEED,
+      data: null,
+      message: MESSAGES.OK,
+    };
+  }
+
   async registerUser(input: RegisterInput): Promise<BaseApiResponse<any>> {
     const findUserName = await this.userRepo.findOne({
       where: { username: input.username },

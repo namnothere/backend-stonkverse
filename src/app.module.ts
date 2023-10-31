@@ -10,6 +10,7 @@ import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { ExceptionsFilter } from './common';
 import { AppController } from './app.controller';
+import { StocksModule } from './stocks';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AppController } from './app.controller';
     SharedModule,
     UserModule,
     TransactionModule,
+    StocksModule,
   ],
   providers: [
     AppController,
