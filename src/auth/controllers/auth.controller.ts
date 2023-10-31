@@ -1,11 +1,10 @@
 import { Controller, UseGuards, Post, Body } from '@nestjs/common';
 import { AuthService } from '../providers';
-import { LocalAuthGuard } from '../guards';
-import { AuthTokenOutput } from '../dtos';
-import { BaseApiResponse } from '../../shared/dtos/base-api-response.dto';
+import { JwtAuthGuard, LocalAuthGuard } from '../guards';
+import { BaseApiResponse } from '../../shared/dtos';
 import { ReqContext } from '../../shared/request-context/req-context.decorator';
 import { RequestContext } from '../../shared/request-context/request-context.dto';
-import { RegisterInput } from '../dtos/auth-register-input.dto';
+import { RegisterInput, AuthTokenOutput } from '../dtos';
 
 @Controller('auth')
 export class AuthController {
@@ -17,6 +16,12 @@ export class AuthController {
     @ReqContext() ctx: RequestContext,
   ): Promise<BaseApiResponse<AuthTokenOutput>> {
     return this.authService.login(ctx.user.id);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  logout(@ReqContext() ctx: RequestContext): Promise<BaseApiResponse<null>> {
+    return this.authService.logout(ctx.user.id);
   }
 
   @Post('register')
