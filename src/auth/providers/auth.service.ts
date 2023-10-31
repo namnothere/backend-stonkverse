@@ -38,10 +38,9 @@ export class AuthService {
     if (!user) {
       throw new ForbiddenException({
         statusCode: 403,
-        message: MESSAGES.NOT_FOUND_USER,
+        message: MESSAGES.USER_NOT_FOUND,
       });
     }
-    // const match = await bcrypt.compare(pass, user.password);
     const match = await compare(pass, user.password);
     if (!match) {
       throw new ForbiddenException({
