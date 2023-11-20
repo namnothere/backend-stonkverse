@@ -19,6 +19,12 @@ export enum USER_STATUS {
   SUSPEND = 5,
 }
 
+export enum USER_GENDER {
+  MALE = 0,
+  FEMALE = 1,
+  OTHER = 2,
+}
+
 @Entity({ name: 'users', schema: process.env.DB_SCHEMA })
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -31,9 +37,9 @@ export class User {
   @Column({ length: 200 })
   username: string;
 
-  // @Unique('user_email', ['email'])
-  // @Column({ length: 200 })
-  // email: string;
+  @Unique('user_email', ['email'])
+  @Column({ length: 200, nullable: true })
+  email: string;
 
   @Column({ nullable: true })
   full_name: string;
@@ -42,7 +48,7 @@ export class User {
   phone: string;
 
   @Column({ nullable: true })
-  gender: number;
+  gender: USER_GENDER;
 
   @CreateDateColumn({ name: 'createdAt', nullable: false })
   createdAt: Date;

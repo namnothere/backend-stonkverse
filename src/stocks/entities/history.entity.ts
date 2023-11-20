@@ -11,37 +11,37 @@ export class History {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('timestamptz', { name: 'Date', nullable: false })
+  @Column('timestamptz', { name: 'date', nullable: false })
   date: Date;
 
-  @Column('bigint', { name: 'OpenPrice', nullable: false })
+  @Column('bigint', { name: 'open_price', nullable: false })
   open: number;
 
-  @Column('bigint', { name: 'HighPrice', nullable: false })
+  @Column('bigint', { name: 'high_price', nullable: false })
   high: number;
 
-  @Column('bigint', { name: 'LowPrice', nullable: false })
+  @Column('bigint', { name: 'low_price', nullable: false })
   low: number;
 
-  @Column('bigint', { name: 'ClosePrice', nullable: false })
+  @Column('bigint', { name: 'close_price', nullable: false })
   close: number;
 
-  @Column('bigint', { name: 'AdjClosePrice', nullable: false })
+  @Column('bigint', { name: 'adj_close_price', nullable: true })
   adjClose: number;
 
-  @Column('bigint', { name: 'Volume', nullable: false })
+  @Column('bigint', { name: 'volume', nullable: false })
   volume: number;
 
-  @Column('text', { name: 'Symbol', nullable: false })
+  @Column('text', { name: 'symbol', nullable: false })
   symbol: string;
 
-  @Column('text', { name: 'Change', nullable: false })
+  @Column('text', { name: 'change', nullable: true })
   change: string;
 
-  @CreateDateColumn({ name: 'createdAt', nullable: false })
+  @CreateDateColumn({ nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updatedAt', nullable: false })
+  @UpdateDateColumn({ nullable: false })
   updatedAt: Date;
 
   constructor(partial: Partial<History>) {

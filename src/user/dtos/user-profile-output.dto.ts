@@ -1,7 +1,6 @@
 import { Expose, Type } from 'class-transformer';
-
 // import { RoleOutput } from './role-output.dto';
-
+import { USER_GENDER } from '../entities';
 export class UserProfileOutput {
   @Expose()
   id: string;
@@ -13,14 +12,7 @@ export class UserProfileOutput {
   code: string;
 
   @Expose()
-  reference_code: string;
-
-  // @Expose()
-  // @Type(() => RoleOutput)
-  // role: RoleOutput;
-
-  // @Expose()
-  // email: string;
+  email: string;
 
   @Expose()
   createdAt: string;
@@ -39,7 +31,7 @@ export class UserProfileOutput {
 
   @Expose()
   @Type(() => Number)
-  gender: number;
+  gender: USER_GENDER;
 
   @Expose()
   verification_code: string;

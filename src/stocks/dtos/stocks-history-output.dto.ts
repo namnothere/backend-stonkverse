@@ -1,4 +1,4 @@
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 
 export class StocksHistoryOutput {
   @Expose()
@@ -8,9 +8,11 @@ export class StocksHistoryOutput {
   date: Date;
 
   @Expose()
+  @Type(() => Number)
   high: number;
 
   @Expose()
+  @Type(() => Number)
   low: number;
 
   @Expose()
