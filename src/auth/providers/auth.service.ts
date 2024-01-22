@@ -67,6 +67,7 @@ export class AuthService {
     const payload = {
       username: user.username,
       sub: user.id,
+      role: user.role,
     };
 
     const authToken = {
@@ -112,7 +113,7 @@ export class AuthService {
     };
   }
 
-  async registerUser(input: RegisterInput): Promise<BaseApiResponse<any>> {
+  async registerUser(input: RegisterInput): Promise<BaseApiResponse<RegisterOutput>> {
     const findUserName = await this.userRepo.findOne({
       where: { username: input.username },
     });
@@ -128,9 +129,10 @@ export class AuthService {
       // verification_code: makeId(6),
       // verification_time: Date.now() + convertMilliseconds(VERIFICATION_TIME),
     });
-    await this.userRepo.save(user);
+    const newuser = this.userRepo.create(user);
+    await this.userRepo.save(newuser);
 
-    const output = plainToClass(RegisterOutput, user, {
+    const output = plainToClass(RegisterOutput, newuser, {
       excludeExtraneousValues: true,
     });
 

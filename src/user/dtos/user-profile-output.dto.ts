@@ -38,4 +38,7 @@ export class UserProfileOutput {
 
   @Expose()
   avatar: string;
+
+  @Expose()
+  role: string;
 }

@@ -9,6 +9,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum Role {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+}
+
 export enum USER_STATUS {
   NEW_REQUEST = -1,
   NOT_KYC = 0,
@@ -67,6 +72,9 @@ export class User {
 
   @Column({ nullable: true })
   token: string;
+
+  @Column('text', { default: Role.USER })
+  role: Role;
 
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);
