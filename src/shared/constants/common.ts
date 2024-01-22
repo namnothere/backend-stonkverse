@@ -15,3 +15,5 @@ export const MESSAGES = {
   USERNAME_ALREADY_EXIST: 'username already exist',
   USER_NOT_FOUND: 'user not found',
 };
+
+export const ROLES_KEY = 'roles';

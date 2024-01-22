@@ -14,6 +14,9 @@ export class RegisterOutput {
   email: string;
 
   @Expose()
+  role: string;
+
+  @Expose()
   createdAt: string;
 
   @Expose()

@@ -4,7 +4,7 @@ import { JwtAuthGuard, LocalAuthGuard } from '../guards';
 import { BaseApiResponse } from '../../shared/dtos';
 import { ReqContext } from '../../shared/request-context/req-context.decorator';
 import { RequestContext } from '../../shared/request-context/request-context.dto';
-import { RegisterInput, AuthTokenOutput } from '../dtos';
+import { RegisterInput, AuthTokenOutput, RegisterOutput } from '../dtos';
 
 @Controller('auth')
 export class AuthController {
@@ -25,7 +25,7 @@ export class AuthController {
   }
 
   @Post('register')
-  registerUser(@Body() input: RegisterInput): Promise<BaseApiResponse<any>> {
+  registerUser(@Body() input: RegisterInput): Promise<BaseApiResponse<RegisterOutput>> {
     return this.authService.registerUser(input);
   }
 }
