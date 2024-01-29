@@ -25,7 +25,9 @@ export class AuthController {
   }
 
   @Post('register')
-  registerUser(@Body() input: RegisterInput): Promise<BaseApiResponse<RegisterOutput>> {
+  registerUser(
+    @Body() input: RegisterInput,
+  ): Promise<BaseApiResponse<RegisterOutput>> {
     return this.authService.registerUser(input);
   }
 }

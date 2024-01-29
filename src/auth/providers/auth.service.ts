@@ -113,7 +113,9 @@ export class AuthService {
     };
   }
 
-  async registerUser(input: RegisterInput): Promise<BaseApiResponse<RegisterOutput>> {
+  async registerUser(
+    input: RegisterInput,
+  ): Promise<BaseApiResponse<RegisterOutput>> {
     const findUserName = await this.userRepo.findOne({
       where: { username: input.username },
     });
