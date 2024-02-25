@@ -14,28 +14,28 @@ export class History {
   @Column('timestamptz', { name: 'date', nullable: false })
   date: Date;
 
-  @Column('bigint', { name: 'open_price', nullable: false })
+  @Column('float', { name: 'open_price', nullable: false })
   open: number;
 
-  @Column('bigint', { name: 'high_price', nullable: false })
+  @Column('float', { name: 'high_price', nullable: false })
   high: number;
 
-  @Column('bigint', { name: 'low_price', nullable: false })
+  @Column('float', { name: 'low_price', nullable: false })
   low: number;
 
-  @Column('bigint', { name: 'close_price', nullable: false })
+  @Column('float', { name: 'close_price', nullable: false })
   close: number;
 
-  @Column('bigint', { name: 'adj_close_price', nullable: true })
+  @Column('float', { name: 'adj_close_price', nullable: true })
   adjClose: number;
 
-  @Column('bigint', { name: 'volume', nullable: false })
+  @Column('float', { name: 'volume', nullable: false })
   volume: number;
 
   @Column('text', { name: 'symbol', nullable: false })
   symbol: string;
 
-  @Column('text', { name: 'change', nullable: true })
+  @Column('float', { name: 'change', nullable: true })
   change: string;
 
   @CreateDateColumn({ nullable: false })

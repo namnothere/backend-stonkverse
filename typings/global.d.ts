@@ -14,6 +14,7 @@ export declare global {
       DB_PASS: string;
       DB_NAME: string;
       DB_SCHEMA: string;
+      DB_URL: string;
       JWT_PUBLIC_KEY_BASE64: string;
       JWT_PRIVATE_KEY_BASE64: string;
       JWT_ACCESS_TOKEN_EXP_IN_SEC: string;
