@@ -19,11 +19,20 @@ import { StocksModule } from './stocks';
       load: [configuration],
     }),
     LoggerModule.forRoot(loggerOptions),
-    TypeOrmModule.forRootAsync({
-      useFactory: (config: ConfigService) => ({
-        ...config.get<TypeOrmModuleOptions>('db'),
-      }),
-      inject: [ConfigService],
+    // TypeOrmModule.forRootAsync({
+    //   useFactory: (config: ConfigService) => ({
+    //     ...config.get<TypeOrmModuleOptions>('db'),
+        // type: 'postgres',
+        // url: 'postgresql://apfallinus27:RIk2YjqTVK1W@ep-dark-wood-a1z1omd0.ap-southeast-1.aws.neon.tech/stonkverse?sslmode=require',
+    //   }),
+    //   inject: [ConfigService],
+    // }),
+    TypeOrmModule.forRoot({
+      type: process.env.DB_TYPE as any,
+      url: process.env.DB_URL,
+      synchronize: false,
+      autoLoadEntities: true,
+      logging: true,
     }),
     AuthModule,
     SharedModule,
