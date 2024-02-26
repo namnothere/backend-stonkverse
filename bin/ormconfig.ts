@@ -1,7 +1,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 /// <reference types="../typings/global" />
 import * as dotenv from 'dotenv';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { DataSource, DataSourceOptions, InstanceChecker } from 'typeorm';
 import { configuration } from '../src/configs';
 dotenv.config();
 // function patchAsyncDataSourceSetup() {
@@ -18,7 +18,6 @@ dotenv.config();
 //       }
 // }
 // patchAsyncDataSourceSetup();
-
 
 const ormconfig = async (): Promise<DataSource> => {
       const config = <{ db: DataSourceOptions }> await configuration();

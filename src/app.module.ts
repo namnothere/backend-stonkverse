@@ -3,14 +3,16 @@ import { AuthModule } from './auth';
 import { SharedModule } from './shared';
 import { UserModule } from './user';
 import { TransactionModule } from './transaction';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { configuration, loggerOptions } from './configs';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { ExceptionsFilter } from './common';
 import { AppController } from './app.controller';
 import { StocksModule } from './stocks';
+import { ChatModule } from './chat';
+import { LangchainModule } from './langchain';
 
 @Module({
   imports: [
@@ -22,8 +24,8 @@ import { StocksModule } from './stocks';
     // TypeOrmModule.forRootAsync({
     //   useFactory: (config: ConfigService) => ({
     //     ...config.get<TypeOrmModuleOptions>('db'),
-        // type: 'postgres',
-        // url: 'postgresql://apfallinus27:RIk2YjqTVK1W@ep-dark-wood-a1z1omd0.ap-southeast-1.aws.neon.tech/stonkverse?sslmode=require',
+    // type: 'postgres',
+    // url: 'postgresql://apfallinus27:RIk2YjqTVK1W@ep-dark-wood-a1z1omd0.ap-southeast-1.aws.neon.tech/stonkverse?sslmode=require',
     //   }),
     //   inject: [ConfigService],
     // }),
@@ -39,6 +41,8 @@ import { StocksModule } from './stocks';
     UserModule,
     TransactionModule,
     StocksModule,
+    ChatModule,
+    LangchainModule,
   ],
   providers: [
     AppController,
