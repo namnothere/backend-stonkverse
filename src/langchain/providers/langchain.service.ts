@@ -10,7 +10,6 @@ import { SqlDatabaseChain } from 'langchain/chains/sql_db';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { RESULT_STATUS, TEMPLATE } from '../../shared/constants';
 import { ChatInputDto } from '../../chat/dtos';
-import { getDataSourceName } from '@nestjs/typeorm';
 
 @Injectable()
 export class LangchainService {

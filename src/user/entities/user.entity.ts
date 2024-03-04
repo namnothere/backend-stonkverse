@@ -1,8 +1,10 @@
+import { Course } from '../../course/entities/course.entity';
 import { Transaction } from '../../transaction/entities';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
@@ -75,6 +77,12 @@ export class User {
 
   @Column('text', { default: Role.USER })
   role: Role;
+
+  @OneToMany(() => Course, (course) => course.createdBy)
+  ownCourses: Course[];
+
+  @ManyToMany(() => Course, (course) => course.students)
+  enrollCourses: Course[];
 
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);

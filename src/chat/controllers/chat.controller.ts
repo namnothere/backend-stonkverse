@@ -8,7 +8,6 @@ export class ChatController {
 
   @Post('ask')
   async sendMessage(@Body() input: ChatInputDto) {
-    console.log(input);
     return this.chatService.ask(input);
   }
 }

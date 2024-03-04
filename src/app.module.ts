@@ -13,6 +13,7 @@ import { AppController } from './app.controller';
 import { StocksModule } from './stocks';
 import { ChatModule } from './chat';
 import { LangchainModule } from './langchain';
+import { CourseModule } from './course';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { LangchainModule } from './langchain';
     StocksModule,
     ChatModule,
     LangchainModule,
+    CourseModule,
   ],
   providers: [
     AppController,
