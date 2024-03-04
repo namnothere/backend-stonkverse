@@ -30,7 +30,7 @@ export enum USER_GENDER {
   OTHER = 2,
 }
 
-@Entity({ name: 'users', schema: process.env.DB_SCHEMA })
+@Entity({ name: 'users', schema: process.env.DB_SCHEMA || 'system' })
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
