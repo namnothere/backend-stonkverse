@@ -14,6 +14,8 @@ import { StocksModule } from './stocks';
 import { ChatModule } from './chat';
 import { LangchainModule } from './langchain';
 import { CourseModule } from './course';
+import { PostController } from './post/controllers/post.controller';
+import { PostModule } from './post/post.module';
 
 @Module({
   imports: [
@@ -46,6 +48,7 @@ import { CourseModule } from './course';
     ChatModule,
     LangchainModule,
     CourseModule,
+    PostModule,
   ],
   providers: [
     AppController,

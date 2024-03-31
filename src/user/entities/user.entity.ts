@@ -1,4 +1,5 @@
 import { Course } from '../../course/entities/course.entity';
+import { Post } from '../../post/entities';
 import { Transaction } from '../../transaction/entities';
 import {
   Column,
@@ -80,9 +81,12 @@ export class User {
 
   @OneToMany(() => Course, (course) => course.createdBy)
   ownCourses: Course[];
-
+  
   @ManyToMany(() => Course, (course) => course.students)
   enrollCourses: Course[];
+
+  @OneToMany(() => Post, (post) => post.createdBy)
+  posts: Post[];
 
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);
