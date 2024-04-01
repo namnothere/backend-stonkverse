@@ -17,13 +17,9 @@ export const app = express();
 
 app.set("trust proxy", 1);
 
-// Body parser
 app.use(express.json({ limit: "50mb" }));
-
-// Cookie parser dùng để parse cookie từ Frontend gửi về Backend
 app.use(cookieParser());
 
-// Cors
 app.use(
   cors({
     origin: [

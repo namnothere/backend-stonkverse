@@ -4,8 +4,8 @@ import {
   createLayout,
   editLayout,
   getLayoutByType,
-} from "../controllers/layout.controller";
-import { updateAccessToken } from "../controllers/user.controller";
+} from "../layout/controllers/layout.controller";
+import { updateAccessToken } from "../user/controllers/user.controller";
 
 const layoutRouter = express.Router();
 

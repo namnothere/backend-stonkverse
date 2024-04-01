@@ -22,6 +22,7 @@ export interface IUser extends Document {
   role: string;
   isVerified: boolean; 
   courses: ICourse[];
+  isActive: boolean;
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
@@ -44,7 +45,6 @@ const userSchema: Schema<IUser> = new Schema(
     password: {
       type: String,
       minLength: [6, "Password must be at least 6 characters"],
-      // Mặc định password sẽ ko được trả về trong kết quả của Queries
       select: false,
     },
     avatar: {
@@ -59,12 +59,15 @@ const userSchema: Schema<IUser> = new Schema(
       type: Boolean,
       default: false,
     },
+    isActive: {
+      type: Boolean,
+      default: false,
+    },
     courses: [{ courseId: String, createdDate: Date }],
   },
   { timestamps: true }
 );
 
-// Hash password trước khi lưu vào Database
 userSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) {
     next();
@@ -74,27 +77,22 @@ userSchema.pre<IUser>("save", async function (next) {
   next();
 });
 
-// Sign Access Token
 userSchema.methods.SignAccessToken = function () {
   return jwt.sign({ id: this._id }, process.env.ACCESS_TOKEN as string, {
     expiresIn: "5m",
   });
 };
 
-// Sign Refresh Token
 userSchema.methods.SignRefreshToken = function () {
   return jwt.sign({ id: this._id }, process.env.REFRESH_TOKEN as string, {
     expiresIn: "3d",
   });
 };
 
-// Compare password
 userSchema.methods.comparePassword = async function (
   enteredPassword: string
 ): Promise<boolean> {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-const userModel: Model<IUser> = mongoose.model("User", userSchema);
-
-export default userModel;
+export const userModel: Model<IUser> = mongoose.model("User", userSchema);

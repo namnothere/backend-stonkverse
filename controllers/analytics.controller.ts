@@ -2,9 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
 import ErrorHandler from "../utils/ErrorHandler";
 import { generateLast12MonthsData } from "../utils/analytics.generator";
-import userModel, { IUser } from "../models/user.model";
-import CourseModel, { ICourse } from "../models/course.model";
-import OrderModel, { IOrder } from "../models/order.model";
+import { userModel, IUser } from "../user/models";
+import { CourseModel, ICourse } from "../course/models";
+import { OrderModel, IOrder } from "../order/models";
 
 // Get users analytics
 export const getUserAnalytics = CatchAsyncErrors(

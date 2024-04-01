@@ -1,26 +1,18 @@
 import { NextFunction, Request, Response } from "express";
-import userModel, { IUser } from "../models/user.model";
-import ErrorHandler from "../utils/ErrorHandler";
-import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
+import { userModel, IUser } from "../models";
+import ErrorHandler from "../../utils/ErrorHandler";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
-import { sendMail } from "../utils/sendMail";
+import { sendMail } from "../../utils/sendMail";
 import {
   accessTokenOptions,
   refreshTokenOptions,
   sendToken,
-} from "../utils/jwt";
-import { redis } from "../utils/redis";
+} from "../../utils/jwt";
+import { redis } from "../../utils/redis";
 import cloudinary from "cloudinary";
 
 require("dotenv").config();
-
-// Register user
-interface IRegistrationBody {
-  name: string;
-  email: string;
-  password: string;
-  avatar?: string;
-}
 
 export const registrationUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -39,9 +31,7 @@ export const registrationUser = CatchAsyncErrors(
         password,
       };
 
-      // activationToken nhận được từ createActivationToken là object {token, activationCode}
       const activationToken = createActivationToken(user);
-
       const activationCode = activationToken.activationCode;
 
       const data = { user: { name: user.name }, activationCode };
@@ -64,15 +54,9 @@ export const registrationUser = CatchAsyncErrors(
   }
 );
 
-interface IActivationToken {
-  token: string;
-  activationCode: string;
-}
-
 export const createActivationToken = (user: any): IActivationToken => {
   const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
 
-  // Token sẽ được tạo ra tự thông tin của object user, từ activationCode và được sign bởi ACTIVATION_SECRET
   const token = jwt.sign(
     { user, activationCode },
     process.env.ACTIVATION_SECRET as Secret,
@@ -83,11 +67,6 @@ export const createActivationToken = (user: any): IActivationToken => {
 
   return { token, activationCode };
 };
-
-interface IActivationRequest {
-  activation_token: string;
-  activation_code: string;
-}
 
 export const activateUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -112,7 +91,7 @@ export const activateUser = CatchAsyncErrors(
         return next(new ErrorHandler("User already exists", 400));
       }
 
-      const user = await userModel.create({ name, email, password });
+      await userModel.create({ name, email, password });
 
       res.status(201).json({ success: true });
     } catch (error: any) {
@@ -120,12 +99,6 @@ export const activateUser = CatchAsyncErrors(
     }
   }
 );
-
-// Login user
-interface ILoginRequest {
-  email: string;
-  password: string;
-}
 
 export const loginUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -136,28 +109,24 @@ export const loginUser = CatchAsyncErrors(
         return next(new ErrorHandler("Please enter email and password", 400));
       }
 
-      // Lấy ra password của user
       const user = await userModel.findOne({ email }).select("+password");
 
       if (!user) {
         return next(new ErrorHandler("Invalid email or password", 400));
       }
 
-      // Sử dụng method comparePassword mà ta đã định nghĩa trong userSchema
       const isPasswordMatch = await user.comparePassword(password);
 
       if (!isPasswordMatch) {
         return next(new ErrorHandler("Invalid password", 400));
       }
 
-      // Tạo Access Token mới
       const accessToken = jwt.sign(
         { id: user._id },
         process.env.ACCESS_TOKEN as string,
         { expiresIn: "5m" }
       );
 
-      // Tạo Refresh Token mới
       const refreshToken = jwt.sign(
         { id: user._id },
         process.env.REFRESH_TOKEN as string,
@@ -171,7 +140,6 @@ export const loginUser = CatchAsyncErrors(
         .cookie("refresh_token", refreshToken, refreshTokenOptions)
         .header("Access-Control-Allow-Credentials", "true");
 
-      // Expire after 7 days
       await redis.set(user._id, JSON.stringify(user), "EX", 604800);
 
       res.status(200).json({
@@ -185,7 +153,6 @@ export const loginUser = CatchAsyncErrors(
   }
 );
 
-// Logout user
 export const logoutUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -204,7 +171,6 @@ export const logoutUser = CatchAsyncErrors(
   }
 );
 
-// Update Access Token
 export const updateAccessToken = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -224,14 +190,12 @@ export const updateAccessToken = CatchAsyncErrors(
 
       const user = JSON.parse(session);
 
-      // Tạo Access Token mới
       const accessToken = jwt.sign(
         { id: user._id },
         process.env.ACCESS_TOKEN as string,
         { expiresIn: "5m" }
       );
 
-      // Tạo Refresh Token mới
       const refreshToken = jwt.sign(
         { id: user._id },
         process.env.REFRESH_TOKEN as string,
@@ -247,7 +211,6 @@ export const updateAccessToken = CatchAsyncErrors(
         .cookie("refresh_token", refreshToken, refreshTokenOptions)
         .header("Access-Control-Allow-Credentials", "true");
 
-      // Expire after 7 days
       await redis.set(user._id, JSON.stringify(user), "EX", 604800);
 
       next();
@@ -257,7 +220,6 @@ export const updateAccessToken = CatchAsyncErrors(
   }
 );
 
-// Update Access Token
 export const updateAccessTokenHandler = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -277,14 +239,12 @@ export const updateAccessTokenHandler = CatchAsyncErrors(
 
       const user = JSON.parse(session);
 
-      // Tạo Access Token mới
       const accessToken = jwt.sign(
         { id: user._id },
         process.env.ACCESS_TOKEN as string,
         { expiresIn: "5m" }
       );
 
-      // Tạo Refresh Token mới
       const refreshToken = jwt.sign(
         { id: user._id },
         process.env.REFRESH_TOKEN as string,
@@ -296,7 +256,6 @@ export const updateAccessTokenHandler = CatchAsyncErrors(
       res.cookie("access_token", accessToken, accessTokenOptions);
       res.cookie("refresh_token", refreshToken, refreshTokenOptions);
 
-      // Expire after 7 days
       await redis.set(user._id, JSON.stringify(user), "EX", 604800);
 
       res.status(200).json({ success: true, accessToken });
@@ -306,7 +265,6 @@ export const updateAccessTokenHandler = CatchAsyncErrors(
   }
 );
 
-// Get user info
 export const getUserInfo = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -329,7 +287,6 @@ interface ISocialAuthBody {
   avatar: string;
 }
 
-// Social Auth
 export const socialAuth = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -348,12 +305,6 @@ export const socialAuth = CatchAsyncErrors(
   }
 );
 
-interface IUpdateUserInfo {
-  name?: string;
-  email?: string;
-}
-
-// Update user info
 export const updateUserInfo = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -378,12 +329,6 @@ export const updateUserInfo = CatchAsyncErrors(
   }
 );
 
-interface IUpdatePassword {
-  oldPassword: string;
-  newPassword: string;
-}
-
-// Update user password
 export const updatePassword = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -393,7 +338,6 @@ export const updatePassword = CatchAsyncErrors(
         return next(new ErrorHandler("Please enter old and new password", 400));
       }
 
-      // Nếu không select, password sẽ mặc định bị exclude
       const user = await userModel.findById(req.user?._id).select("+password");
 
       if (user?.password === undefined) {
@@ -407,7 +351,6 @@ export const updatePassword = CatchAsyncErrors(
 
       user.password = newPassword;
 
-      // Update session trên Redis
       await redis.set(req.user?.id, JSON.stringify(user));
 
       await user.save();
@@ -419,11 +362,6 @@ export const updatePassword = CatchAsyncErrors(
   }
 );
 
-interface IUpdateProfilePicture {
-  avatar: string;
-}
-
-// Update profile picture
 export const updateProfilePicture = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -433,7 +371,6 @@ export const updateProfilePicture = CatchAsyncErrors(
 
       const user = await userModel.findById(userId);
 
-      // Hủy avatar hiện có trong cloudinary để thay thế bằng avatar mới
       if (avatar && user) {
         if (user?.avatar.public_id) {
           await cloudinary.v2.uploader.destroy(user?.avatar?.public_id);
@@ -447,7 +384,6 @@ export const updateProfilePicture = CatchAsyncErrors(
             url: myCloud.secure_url,
           };
         } else {
-          // Nếu chưa có avatar thì đơn giản là thêm mới
           const myCloud = await cloudinary.v2.uploader.upload(avatar, {
             folder: "avatars",
             width: 150,
@@ -471,9 +407,8 @@ export const updateProfilePicture = CatchAsyncErrors(
   }
 );
 
-// Get all users
 export const getAllUsers = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const users = await userModel.find().sort({ createdAt: -1 });
 
@@ -484,7 +419,6 @@ export const getAllUsers = CatchAsyncErrors(
   }
 );
 
-// Update user role
 export const updateUserRole = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -506,7 +440,6 @@ export const updateUserRole = CatchAsyncErrors(
   }
 );
 
-// Delete User
 export const deleteUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -518,7 +451,9 @@ export const deleteUser = CatchAsyncErrors(
         return next(new ErrorHandler("User not found", 404));
       }
 
-      await user.deleteOne({ id });
+      await user.updateOne({ id }, {
+        $set: { isActive: false },
+      });
 
       await redis.del(id);
 
