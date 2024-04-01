@@ -1,5 +1,5 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
-import { IUser } from "./user.model";
+import { IUser } from "../../user/models/user.model";
 
 export interface IReply extends Document {
   _id: Types.ObjectId;
@@ -147,6 +147,4 @@ const courseSchema = new Schema<ICourse>(
   { timestamps: true }
 );
 
-const CourseModel: Model<ICourse> = mongoose.model("Course", courseSchema);
-
-export default CourseModel;
+export const CourseModel: Model<ICourse> = mongoose.model("Course", courseSchema);
