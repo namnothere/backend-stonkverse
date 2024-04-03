@@ -10,6 +10,7 @@ import {
   getAllCourses,
   getAllCoursesAdmin,
   getCourseByAdmin,
+  getCoursesByKeySearch,
   getCourseByQuery,
   getCourseByUser,
   getCourseReviews,
@@ -41,6 +42,8 @@ courseRouter.put(
 
 courseRouter.get("/get-course/:id", getSingleCourse);
 courseRouter.get("/search-courses/:query", getCourseByQuery);
+
+courseRouter.get("/get-key-search/:query", getCoursesByKeySearch);
 
 courseRouter.get("/get-courses", getAllCourses);
 courseRouter.get("/get-courses/:categorySlug", getCoursesByCategory);

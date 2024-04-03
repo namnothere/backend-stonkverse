@@ -17,6 +17,11 @@ export interface IQuestion extends Document {
   createdAt: Date;
 }
 
+export interface IKeySearch extends Document {
+  _id: Types.ObjectId;
+  name: string;
+}
+
 export interface IReviewReply extends Document {
   _id: Types.ObjectId;
   user: IUser;

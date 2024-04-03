@@ -169,6 +169,42 @@ export const getCoursesByCategory = CatchAsyncErrors(
   }
 );
 
+// Get Courses By Key Search
+export const getCoursesByKeySearch = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {  
+      const { query } = req.params;
+
+      const courses = await CourseModel.find({
+        name: { $regex: query, $options: "i" },
+      }).select(
+        "name -_id"
+      );
+      // check trùng
+      const notDuplicate = new Set();
+      
+      courses.forEach(course => {
+        if(course.name){
+          notDuplicate.add(course.name)
+        }
+      });
+
+      const courseSearch = [...notDuplicate];
+      console.log(courseSearch);
+      // const courseSearch = courses.map((course) => {
+      //   console.log(course.courseData); // Truy cập và in ra courseData
+      
+      //   return course.name;
+      // }).flat();
+      // console.log(courseSearch[0])
+
+      res.status(200).json({ success: true, courseSearch });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
 // Get course content - only for valid user
 export const getCourseByUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
