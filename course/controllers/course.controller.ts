@@ -1,15 +1,15 @@
 import cloudinary from "cloudinary";
-import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import { NextFunction, Request, Response } from "express";
-import ErrorHandler from "../utils/ErrorHandler";
-import { createCourse } from "../services/course.service";
-import CourseModel from "../models/course.model";
-import { redis } from "../utils/redis";
+import ErrorHandler from "../../utils/ErrorHandler";
+import { createCourse } from "../providers/course.service";
+import { CourseModel } from "../models";
+import { redis } from "../../utils/redis";
 import mongoose from "mongoose";
-import { sendMail } from "../utils/sendMail";
-import NotificationModel from "../models/notification.model";
+import { sendMail } from "../../utils/sendMail";
+import { NotificationModel } from "../../models";
 import axios from "axios";
-import LayoutModel from "../models/layout.model";
+import { LayoutModel } from "../../layout/models";
 
 // Upload course
 export const uploadCourse = CatchAsyncErrors(

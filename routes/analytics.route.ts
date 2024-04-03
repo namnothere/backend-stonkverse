@@ -5,7 +5,7 @@ import {
   getUserAnalytics,
 } from "../controllers/analytics.controller";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
-import { updateAccessToken } from "../controllers/user.controller";
+import { updateAccessToken } from "../user/controllers/user.controller";
 
 const analyticsRouter = express.Router();
 

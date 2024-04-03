@@ -4,7 +4,7 @@ import {
   getAllNotifications,
   updateNotification,
 } from "../controllers/notification.controller";
-import { updateAccessToken } from "../controllers/user.controller";
+import { updateAccessToken } from "../user/controllers/user.controller";
 
 const notificationRouter = express.Router();
 

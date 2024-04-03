@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { CatchAsyncErrors } from "./catchAsyncErrors";
 import ErrorHandler from "../utils/ErrorHandler";
 import { redis } from "../utils/redis";
-import { updateAccessToken } from "../controllers/user.controller";
+import { updateAccessToken } from "../user/controllers/user.controller";
 require("dotenv").config();
 
 // Authenticated user
