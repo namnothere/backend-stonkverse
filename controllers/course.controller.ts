@@ -169,7 +169,7 @@ export const getCoursesByCategory = CatchAsyncErrors(
   }
 );
 
-// Get Courses By Key Search
+// Get Courses By Key Search: Remember add thumbnail
 export const getCoursesByKeySearch = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {  

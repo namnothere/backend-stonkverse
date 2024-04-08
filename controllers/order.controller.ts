@@ -111,7 +111,10 @@ export const createOrder = CatchAsyncErrors(
 export const getAllOrders = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const orders = await OrderModel.find().sort({ createdAt: -1 });
+      const orders = await OrderModel.find()
+        .sort({ createdAt: -1 });
+
+      console.log("orders", orders);
 
       res.status(200).json({ success: true, orders });
     } catch (error: any) {

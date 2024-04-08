@@ -20,6 +20,10 @@ export interface IQuestion extends Document {
 export interface IKeySearch extends Document {
   _id: Types.ObjectId;
   name: string;
+  thumbnail: {
+    public_id: string;
+    url: string;
+  };
 }
 
 export interface IReviewReply extends Document {
@@ -60,7 +64,7 @@ export interface ICourseData extends Document {
 export interface ICourse extends Document {
   name: string;
   description?: string;
-  category: string;
+  // category: string;
   price: number;
   estimatedPrice?: number;
   thumbnail: {
@@ -125,7 +129,7 @@ const courseSchema = new Schema<ICourse>(
   {
     name: { type: String, required: true },
     description: { type: String, required: true },
-    category: { type: String, required: true },
+    // category: { type: String, required: true },
     price: { type: Number, required: true },
     estimatedPrice: { type: Number },
     thumbnail: {

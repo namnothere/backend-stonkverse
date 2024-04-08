@@ -12,7 +12,7 @@
     "start": "node build/server.js",
     "build": "tsc"
   },
-  "author": "GiangLe",
+  "author": "Tamnhu",
   "license": "ISC",
   "dependencies": {
     "@types/bcryptjs": "^2.4.4",
