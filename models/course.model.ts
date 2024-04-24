@@ -24,6 +24,10 @@ export interface IKeySearch extends Document {
     public_id: string;
     url: string;
   };
+  curriculumn: {
+    public_id: string;
+    url: string;
+  };
 }
 
 export interface IReviewReply extends Document {
@@ -53,13 +57,92 @@ export interface ICourseData extends Document {
   description: string;
   videoUrl: string;
   videoThumbnail: object;
+  fileCurriculumn: object;
   videoSection: string;
   videoLength: number;
   videoPlayer: string;
   links: ILink[];
   suggestion: string;
   questions: IQuestion[];
+  quizzes:IQuestionQuiz[];
 }
+
+// QUIZZ
+// export interface IQuestionOption extends Document {
+//   _id: Types.ObjectId;
+//   questionText: string;
+//   createdAt: Date;
+
+// }
+
+export interface IAnswerQuiz extends Document {
+  _id: Types.ObjectId;
+  user: IUser;
+  answer: string;
+  score: Number;
+  createdAt: Date;
+}
+//main
+export interface IQuestionQuiz extends Document {
+  _id: Types.ObjectId;
+  user: IUser;
+  question?: string;
+  answers: IAnswerQuiz[];
+  correctAnswer: String,
+  maxScore:  Number,
+  createdAt: Date;
+}
+// export interface IAnswerOption {
+//   _id: Types.ObjectId;
+//   user: IUser,
+//   answerText: string;
+//   isCorrect: boolean;
+// }
+
+// export interface IQuiz extends Document {
+//   _id: Types.ObjectId;
+//   title: string;
+//   questions: Types.DocumentArray<IQuestionOption>;
+//   passScore: number;
+// }
+
+// const quizzQuestionSchema = new mongoose.Schema<IQuestionOption>({
+//   questionText: { type: String, required: true },
+//   answerOptions: [{
+//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+//     answerText: { type: String, required: true },
+//     isCorrect: { type: Boolean, required: true }
+//   }]
+// });
+
+// const quizSchema = new mongoose.Schema<IQuiz>({
+//   title: { type: String, required: true },
+//   questions: [quizzQuestionSchema],
+//   passScore: { type: Number, required: true }
+// });
+
+const answerQuizSchema = new Schema<IAnswerQuiz>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User" },
+    answer: String,
+    score: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+
+//main
+const questionQuizSchema = new Schema<IQuestionQuiz>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User" },
+    question: String,
+    answers: [answerQuizSchema],
+    correctAnswer: String,
+    maxScore: {type: Number, default:10},
+  },
+  { timestamps: true }
+);
+
 
 export interface ICourse extends Document {
   name: string;
@@ -68,6 +151,10 @@ export interface ICourse extends Document {
   price: number;
   estimatedPrice?: number;
   thumbnail: {
+    public_id: string;
+    url: string;
+  };
+  curriculumn: {
     public_id: string;
     url: string;
   };
@@ -115,7 +202,8 @@ const commentSchema = new Schema<IQuestion>(
 
 const courseDataSchema = new Schema<ICourseData>({
   videoUrl: String,
-  // videoThumbnail: Object,
+  videoThumbnail: Object,
+  fileCurriculumn: Object,
   title: String,
   videoSection: String,
   description: String,
@@ -123,6 +211,7 @@ const courseDataSchema = new Schema<ICourseData>({
   links: [linkSchema],
   suggestion: String,
   questions: [commentSchema],
+  quizzes: [questionQuizSchema],
 });
 
 const courseSchema = new Schema<ICourse>(
@@ -133,6 +222,16 @@ const courseSchema = new Schema<ICourse>(
     price: { type: Number, required: true },
     estimatedPrice: { type: Number },
     thumbnail: {
+      public_id: {
+        type: String,
+        //  required: true
+      },
+      url: {
+        type: String,
+        // required: true
+      },
+    },
+    curriculumn: {
       public_id: {
         type: String,
         //  required: true

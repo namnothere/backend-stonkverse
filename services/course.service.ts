@@ -22,3 +22,5 @@ export const createCourse = CatchAsyncErrors(
     res.status(201).json({ success: true, course, category: category });
   }
 );
+
+

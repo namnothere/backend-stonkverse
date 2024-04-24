@@ -18,6 +18,8 @@ import {
   getSingleCourse,
   getUserCourses,
   uploadCourse,
+  addQuestionQuiz,
+  addAnswerQuiz,
 } from "../controllers/course.controller";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../controllers/user.controller";
@@ -31,6 +33,8 @@ courseRouter.post(
   authorizeRoles("admin"),
   uploadCourse
 );
+
+
 
 courseRouter.put(
   "/edit-course/:id",
@@ -65,12 +69,21 @@ courseRouter.get(
 
 courseRouter.put(
   "/add-question",
-  updateAccessToken,
-  isAuthenticated,
+  // updateAccessToken,
+  // isAuthenticated,
   addQuestion
 );
 
+courseRouter.put(
+  "/add-quiz-question",
+  // updateAccessToken,
+  // isAuthenticated,
+  addQuestionQuiz
+);
+
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
+
+courseRouter.put("/add-answer-quiz", /*updateAccessToken, isAuthenticated,*/ addAnswerQuiz);
 
 courseRouter.put(
   "/add-review/:id",
