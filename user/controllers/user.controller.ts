@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { userModel, IUser } from "../models";
+import { userModel, IUser, learningProgressModel } from "../models";
 import ErrorHandler from "../../utils/ErrorHandler";
 import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
@@ -11,6 +11,8 @@ import {
 } from "../../utils/jwt";
 import { redis } from "../../utils/redis";
 import cloudinary from "cloudinary";
+import { MESSAGES, RESULT_STATUS } from "../../shared/common";
+import { CourseModel } from "../../course/models";
 
 require("dotenv").config();
 
@@ -33,6 +35,8 @@ export const registrationUser = CatchAsyncErrors(
 
       const activationToken = createActivationToken(user);
       const activationCode = activationToken.activationCode;
+
+      console.log(activationToken);
 
       const data = { user: { name: user.name }, activationCode };
 
@@ -91,7 +95,7 @@ export const activateUser = CatchAsyncErrors(
         return next(new ErrorHandler("User already exists", 400));
       }
 
-      await userModel.create({ name, email, password });
+      await userModel.create({ name, email, password, isActive: true });
 
       res.status(201).json({ success: true });
     } catch (error: any) {
@@ -132,6 +136,8 @@ export const loginUser = CatchAsyncErrors(
         process.env.REFRESH_TOKEN as string,
         { expiresIn: "3d" }
       );
+
+      console.log(accessToken, refreshToken);
 
       res
         .cookie("access_token", accessToken, accessTokenOptions)
@@ -465,3 +471,60 @@ export const deleteUser = CatchAsyncErrors(
     }
   }
 );
+
+export const resetUserLearningProgress = CatchAsyncErrors(
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await userModel.find().sort({ createdAt: -1 });
+
+      const promises = users.map(async (user: IUser) => {
+        const courseIds = user.courses.map((course: any) => course.courseId);
+        const courses = await CourseModel.find({ _id: { $in: courseIds } });
+
+        for (const course of courses) {
+          const newProgress = await learningProgressModel.create({
+            courseId: course._id,
+            user: user,
+            progress: [],
+          });
+          await newProgress.save();
+        }
+      });
+
+      await Promise.all(promises);
+      
+      res
+        .status(201)
+        .json({ status: RESULT_STATUS.SUCCESS });
+
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+)
+
+export const getUserLearningProgress = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await userModel.findById(req.user?.id);
+      if (!user) {
+        return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
+      }
+      
+      const courseId = req.params.courseId;
+      const learningProgress = await learningProgressModel.findOne({
+        user,
+        courseId
+      });
+
+      if (!learningProgress) {
+        return next(new ErrorHandler(MESSAGES.LEARNING_PROGRESS_NOT_FOUND, 404));
+      }
+
+      res.status(200).json({ result: RESULT_STATUS.SUCCESS, learningProgress });
+
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+)
