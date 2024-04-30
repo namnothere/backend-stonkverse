@@ -1,7 +1,7 @@
 import { Response } from "express";
-import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
-import CourseModel from "../models/course.model";
-import LayoutModel from "../models/layout.model";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
+import { CourseModel } from "../models";
+import { LayoutModel } from "../../layout/models";
 
 // Create course
 export const createCourse = CatchAsyncErrors(

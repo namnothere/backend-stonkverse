@@ -20,9 +20,9 @@ import {
   uploadCourse,
   addQuestionQuiz,
   addAnswerQuiz,
-} from "../controllers/course.controller";
+} from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
-import { updateAccessToken } from "../controllers/user.controller";
+import { updateAccessToken } from "../user/controllers";
 
 const courseRouter = express.Router();
 

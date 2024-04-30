@@ -5,8 +5,8 @@ import {
   getAllOrders,
   newPayment,
   sendStripePublishableKey,
-} from "../controllers/order.controller";
-import { updateAccessToken } from "../controllers/user.controller";
+} from "../order/controllers/order.controller";
+import { updateAccessToken } from "../user/controllers/user.controller";
 
 const orderRouter = express.Router();
 

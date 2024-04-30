@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
-import contactModel, { IContact } from "../models/contact.model";
+import { contactModel, IContact } from "../models";
 import ErrorHandler from "../utils/ErrorHandler";
 
 // Get all notifications

@@ -15,6 +15,4 @@ const contactSchema: Schema<IContact> = new Schema(
   { timestamps: true }
 );
 
-const contactModel: Model<IContact> = mongoose.model("Contact", contactSchema);
-
-export default contactModel;
+export const contactModel: Model<IContact> = mongoose.model("Contact", contactSchema);

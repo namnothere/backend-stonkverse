@@ -1,13 +1,13 @@
 import { NextFunction, Request, Response } from "express";
-import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
-import ErrorHandler from "../utils/ErrorHandler";
-import OrderModel, { IOrder } from "../models/order.model";
-import userModel from "../models/user.model";
-import CourseModel from "../models/course.model";
-import { newOrder } from "../services/order.service";
-import { sendMail } from "../utils/sendMail";
-import NotificationModel from "../models/notification.model";
-import { redis } from "../utils/redis";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
+import ErrorHandler from "../../utils/ErrorHandler";
+import { IOrder, OrderModel } from "../models";
+import { userModel } from "../../user/models";
+import { CourseModel } from "../../course/models";
+import { newOrder } from "../providers";
+import { sendMail } from "../../utils/sendMail";
+import { NotificationModel } from "../../models";
+import { redis } from "../../utils/redis";
 
 require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -107,9 +107,8 @@ export const createOrder = CatchAsyncErrors(
   }
 );
 
-// Get all courses
 export const getAllOrders = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const orders = await OrderModel.find()
         .sort({ createdAt: -1 });
@@ -123,16 +122,14 @@ export const getAllOrders = CatchAsyncErrors(
   }
 );
 
-// Send Stripe publishable key
 export const sendStripePublishableKey = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     res
       .status(200)
       .json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
   }
 );
 
-// New Payment
 export const newPayment = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
