@@ -113,8 +113,6 @@ export const getAllOrders = CatchAsyncErrors(
       const orders = await OrderModel.find()
         .sort({ createdAt: -1 });
 
-      console.log("orders", orders);
-
       res.status(200).json({ success: true, orders });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));

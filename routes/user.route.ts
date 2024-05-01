@@ -13,6 +13,7 @@ import {
   socialAuth,
   updateAccessToken,
   updateAccessTokenHandler,
+  updateLessonCompletion,
   updatePassword,
   updateProfilePicture,
   updateUserInfo,
@@ -82,6 +83,7 @@ userRouter.delete(
 );
 
 userRouter.get("/reset-user-progress", resetUserLearningProgress);
-userRouter.get("/user/progress/:courseId", getUserLearningProgress)
+userRouter.get("/user/progress/:courseId", updateAccessToken, isAuthenticated, getUserLearningProgress)
+userRouter.post("/user/progress/:courseId/:courseDataId", updateAccessToken, isAuthenticated, updateLessonCompletion)
 
 export default userRouter;

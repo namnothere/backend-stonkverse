@@ -140,8 +140,6 @@ export const loginUser = CatchAsyncErrors(
         { expiresIn: "3d" }
       );
 
-      console.log(accessToken, refreshToken);
-
       res
         .cookie("access_token", accessToken, accessTokenOptions)
         .header("Access-Control-Allow-Credentials", "true");
@@ -238,13 +236,11 @@ export const updateAccessTokenHandler = CatchAsyncErrors(
         process.env.REFRESH_TOKEN as string
       ) as JwtPayload;
 
-      const message = "Coud not refresh token";
-
-      if (!decoded) return next(new ErrorHandler(message, 400));
+      if (!decoded) return next(new ErrorHandler(MESSAGES.COULD_NOT_REFRESH_TOKEN, 400));
 
       const session = await redis.get(decoded.id as string);
 
-      if (!session) return next(new ErrorHandler(message, 400));
+      if (!session) return next(new ErrorHandler(MESSAGES.COULD_NOT_REFRESH_TOKEN, 400));
 
       const user = JSON.parse(session);
 
@@ -435,7 +431,7 @@ export const updateUserRole = CatchAsyncErrors(
       const existedUser = await userModel.findOne({ email });
 
       if (!existedUser) {
-        res.status(400).json({ success: false, message: "User not found" });
+        res.status(404).json({ success: false, message: MESSAGES.USER_NOT_FOUND });
       }
 
       existedUser ? (existedUser.role = role) : existedUser;
@@ -485,12 +481,22 @@ export const resetUserLearningProgress = CatchAsyncErrors(
         const courses = await CourseModel.find({ _id: { $in: courseIds } });
 
         for (const course of courses) {
-          const newProgress = await learningProgressModel.create({
-            courseId: course._id,
-            user: user,
-            progress: [],
-          });
-          await newProgress.save();
+          const learningProgress = await learningProgressModel.findOne({
+            user,
+            courseId: course._id
+          })
+
+          if (learningProgress) {
+            learningProgress.progress = [];
+            await learningProgress.save();
+          } else {
+            const newProgress = await learningProgressModel.create({
+              courseId: course._id,
+              user: user,
+              progress: [],
+            });
+            await newProgress.save();
+          }
         }
       });
 
@@ -509,12 +515,15 @@ export const resetUserLearningProgress = CatchAsyncErrors(
 export const getUserLearningProgress = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = await userModel.findById(req.user?.id);
+      const user = await userModel.findById(req.user?._id);
       if (!user) {
         return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
       }
       
       const courseId = req.params.courseId;
+      if (!courseId) {
+        return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 400));
+      }
       const learningProgress = await learningProgressModel.findOne({
         user,
         courseId
@@ -524,6 +533,38 @@ export const getUserLearningProgress = CatchAsyncErrors(
         return next(new ErrorHandler(MESSAGES.LEARNING_PROGRESS_NOT_FOUND, 404));
       }
 
+      res.status(200).json({ result: RESULT_STATUS.SUCCESS, learningProgress });
+
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+)
+
+export const updateLessonCompletion = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await userModel.findById(req.user?._id);
+      if (!user) {
+        return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
+      }
+
+      const { courseDataId, courseId } = req.params;
+
+      const learningProgress = await learningProgressModel.findOne({
+        user,
+        courseId
+      });
+
+      if (!learningProgress) {
+        return next(new ErrorHandler(MESSAGES.LEARNING_PROGRESS_NOT_FOUND, 404));
+      }
+
+      if (!learningProgress.progress.includes(courseDataId)) {
+        learningProgress.progress.push(courseDataId);
+        await learningProgress.save();
+      }
+      
       res.status(200).json({ result: RESULT_STATUS.SUCCESS, learningProgress });
 
     } catch (error: any) {

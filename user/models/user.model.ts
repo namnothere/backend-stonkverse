@@ -76,19 +76,13 @@ export enum COURSE_DATA_STATUS {
 export interface ILearningProgress extends Document {
   user: IUser;
   courseId: string;
-  progress:  [{
-    lessonId: string,
-    status: COURSE_DATA_STATUS
-  }];
+  progress:  string[];
 }
 
 export const LearningProgressSchema = new Schema<ILearningProgress>({
   user: { type: Schema.Types.ObjectId, ref: "User" },
   courseId: String,
-  progress: [{
-    lessonId: String,
-    status: Number
-  }]
+  progress: [String]
 })
 
 userSchema.pre<IUser>("save", async function (next) {

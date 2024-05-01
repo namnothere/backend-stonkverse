@@ -9,18 +9,21 @@ require("dotenv").config();
 // Authenticated user
 export const isAuthenticated = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
-    const access_token = req.cookies.access_token as string;
-
+    var access_token = req.cookies.access_token as string;
+    const headers = req.headers;
+    
     // Nếu Cookie của request không có access_token, có nghĩa là user chưa login
-    if (!access_token) {
+    if (!access_token && !headers.authorization) {
       return next(
         new ErrorHandler("Please login to access this resource!", 400)
       );
     }
-
-    // Kiểm tra access token trong cookie của request có thật sự
-    // được sign bởi chính ACCESS_TOKEN signature hay không
-    // decoded trả về là 1 object có trường id và value là _id của user
+    
+    const authorization = headers.authorization?.replace("Bearer ", "");
+    if (!access_token && authorization) {
+      access_token = authorization as string;
+    }
+    
     const decoded = jwt.verify(
       access_token,
       process.env.ACCESS_TOKEN as string
