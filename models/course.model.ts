@@ -24,7 +24,7 @@ export interface IKeySearch extends Document {
     public_id: string;
     url: string;
   };
-  curriculumn: {
+  curriculum: {
     public_id: string;
     url: string;
   };
@@ -57,7 +57,6 @@ export interface ICourseData extends Document {
   description: string;
   videoUrl: string;
   videoThumbnail: object;
-  fileCurriculumn: object;
   videoSection: string;
   videoLength: number;
   videoPlayer: string;
@@ -154,7 +153,7 @@ export interface ICourse extends Document {
     public_id: string;
     url: string;
   };
-  curriculumn: {
+  curriculum: {
     public_id: string;
     url: string;
   };
@@ -203,7 +202,6 @@ const commentSchema = new Schema<IQuestion>(
 const courseDataSchema = new Schema<ICourseData>({
   videoUrl: String,
   videoThumbnail: Object,
-  fileCurriculumn: Object,
   title: String,
   videoSection: String,
   description: String,
@@ -231,7 +229,7 @@ const courseSchema = new Schema<ICourse>(
         // required: true
       },
     },
-    curriculumn: {
+    curriculum: {
       public_id: {
         type: String,
         //  required: true

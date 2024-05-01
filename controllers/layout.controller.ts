@@ -40,16 +40,16 @@ export const createLayout = CatchAsyncErrors(
         await LayoutModel.create({ type: "FAQ", faq: faqItems });
       }
 
-      if (type === "Categories") {
-        const { categories } = req.body;
-        const categoryItems = categories.map((category: any) => ({
-          title: category.title,
-        }));
-        await LayoutModel.create({
-          type: "Categories",
-          categories: categoryItems,
-        });
-      }
+      // if (type === "Categories") {
+      //   const { categories } = req.body;
+      //   const categoryItems = categories.map((category: any) => ({
+      //     title: category.title,
+      //   }));
+      //   await LayoutModel.create({
+      //     type: "Categories",
+      //     categories: categoryItems,
+      //   });
+      // }
 
       res
         .status(200)
@@ -106,19 +106,19 @@ export const editLayout = CatchAsyncErrors(
         });
       }
 
-      if (type === "Categories") {
-        const { categories } = req.body;
-        const existCategories = await LayoutModel.findOne({
-          type: "Categories",
-        });
-        const categoryItems = categories.map((category: any) => ({
-          title: category.title,
-        }));
-        await LayoutModel.findByIdAndUpdate(existCategories?._id, {
-          type: "Categories",
-          categories: categoryItems,
-        });
-      }
+      // if (type === "Categories") {
+      //   const { categories } = req.body;
+      //   const existCategories = await LayoutModel.findOne({
+      //     type: "Categories",
+      //   });
+      //   const categoryItems = categories.map((category: any) => ({
+      //     title: category.title,
+      //   }));
+      //   await LayoutModel.findByIdAndUpdate(existCategories?._id, {
+      //     type: "Categories",
+      //     categories: categoryItems,
+      //   });
+      // }
 
       res
         .status(200)

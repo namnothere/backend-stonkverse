@@ -50,7 +50,7 @@ courseRouter.get("/search-courses/:query", getCourseByQuery);
 courseRouter.get("/get-key-search/:query", getCoursesByKeySearch);
 
 courseRouter.get("/get-courses", getAllCourses);
-courseRouter.get("/get-courses/:categorySlug", getCoursesByCategory);
+// courseRouter.get("/get-courses/:categorySlug", getCoursesByCategory);
 
 courseRouter.get(
   "/get-course-content/:id",

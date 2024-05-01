@@ -55,71 +55,58 @@ export const editCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = req.body;
-      const thumbnail = data.thumbnail;
-      const curriculum = data.curriculum;
       const courseId = req.params.id;
 
       let existCourse: any = await CourseModel.findById(courseId);
 
       if (!existCourse) {
         res.status(404).json({ success: false, message: "Course not found" });
+        return;
       }
 
-      const categories = await LayoutModel.findOne({ type: "Categories" });
+      // const categories = await LayoutModel.findOne({ type: "Categories" });
+      // const oldCategory = categories?.categories.find(
+      //   (category) => category.title === existCourse.category
+      // );
 
-      const oldCategory = categories?.categories.find(
-        (category) => category.title === existCourse.category
-      );
+      // if (oldCategory) {
+      //   const courseIndex = oldCategory?.courses?.findIndex(
+      //     (course: any) => course.toString() === existCourse._id.toString()
+      //   );
 
-      if (oldCategory) {
-        const courseIndex = oldCategory?.courses?.findIndex(
-          (course: any) => course.toString() === existCourse._id.toString()
-        );
+      //   oldCategory.courses?.splice(courseIndex, 1);
+      // }
 
-        oldCategory.courses?.splice(courseIndex, 1);
-      }
-
-      // Handling thumbnail updates
-      if (thumbnail && !thumbnail.startsWith("https")) {
-        await cloudinary.v2.uploader.destroy(existCourse.thumbnail.public_id);
-
-        const myCloud = await cloudinary.v2.uploader.upload(thumbnail, {
-          folder: "courses",
-        });
-
-        data.thumbnail = {
-          public_id: myCloud.public_id,
-          url: myCloud.secure_url,
-        };
-      }
-
-      if (existCourse && thumbnail.startsWith("https")) {
-        data.thumbnail = {
-          public_id: existCourse?.thumbnail.public_id,
-          url: existCourse?.thumbnail.url,
-        };
-      }
-      
-       // Handling curriculum updates
-       if (curriculum && !curriculum.startsWith("https")) {
-        if (existCourse.curriculum && existCourse.curriculum.public_id) {
-          await cloudinary.v2.uploader.destroy(existCourse.curriculum.public_id, {
-            resource_type: 'raw'
+      // Handling Thumbnail
+      if (data.thumbnail) {
+        // Check if thumbnail exists in the request body
+        const thumbnail = data.thumbnail;
+        if (!thumbnail.startsWith("https")) {
+          // If not a URL, upload to cloudinary and update thumbnail data
+          const thumbnailCloud = await cloudinary.v2.uploader.upload(thumbnail, {
+            folder: "courses",
           });
+          data.thumbnail = {
+            public_id: thumbnailCloud.public_id,
+            url: thumbnailCloud.secure_url,
+          };
         }
-        const curriculumCloud = await cloudinary.v2.uploader.upload(curriculum, {
-          resource_type: 'raw',
-          folder: "curriculums",
-        });
-        data.curriculum = {
-          public_id: curriculumCloud.public_id,
-          url: curriculumCloud.secure_url,
-        };
-      } else if (curriculum.startsWith("https")) {
-        data.curriculum = {
-          public_id: existCourse.curriculum.public_id,
-          url: existCourse.curriculum.url,
-        };
+      }
+
+      // Handling Curriculum
+      if (data.curriculum) {
+        // Check if curriculum exists in the request body
+        const curriculum = data.curriculum;
+        if (!curriculum.startsWith("https")) {
+          // If not a URL, upload to cloudinary and update curriculum data
+          const curriculumCloud = await cloudinary.v2.uploader.upload(curriculum, {
+            folder: "curriculums",
+          });
+          data.curriculum = {
+            public_id: curriculumCloud.public_id,
+            url: curriculumCloud.secure_url,
+          };
+        }
       }
 
       const updatedCourse = await CourseModel.findByIdAndUpdate(
@@ -130,13 +117,13 @@ export const editCourse = CatchAsyncErrors(
         { new: true }
       );
 
-      const newCategory = categories?.categories.find(
-        (category) => category.title === data.category
-      );
+      // const newCategory = categories?.categories.find(
+      //   (category) => category.title === data.category
+      // );
 
-      newCategory?.courses.push(updatedCourse?._id);
+      // newCategory?.courses.push(updatedCourse?._id);
 
-      await categories?.save();
+      // await categories?.save();
 
       res.status(201).json({ success: true, course: updatedCourse });
     } catch (error: any) {
@@ -144,6 +131,99 @@ export const editCourse = CatchAsyncErrors(
     }
   }
 );
+
+// export const editCourse = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const data = req.body;
+//       const thumbnail = data.thumbnail;
+//       const curriculum = data.curriculum;
+//       const courseId = req.params.id;
+
+//       let existCourse: any = await CourseModel.findById(courseId);
+
+//       if (!existCourse) {
+//         res.status(404).json({ success: false, message: "Course not found" });
+//         return;
+//       }
+
+//       const categories = await LayoutModel.findOne({ type: "Categories" });
+//       const oldCategory = categories?.categories.find(
+//         (category) => category.title === existCourse.category
+//       );
+
+//       if (oldCategory) {
+//         const courseIndex = oldCategory?.courses?.findIndex(
+//           (course: any) => course.toString() === existCourse._id.toString()
+//         );
+
+//         oldCategory.courses?.splice(courseIndex, 1);
+//       }
+
+//       //Handling Thumbnail
+//       if (thumbnail && !thumbnail.startsWith("https")) {
+//         await cloudinary.v2.uploader.destroy(existCourse.thumbnail.public_id);
+
+//         const myCloud = await cloudinary.v2.uploader.upload(thumbnail, {
+//           folder: "courses",
+//         });
+
+//         data.thumbnail = {
+//           public_id: myCloud.public_id,
+//           url: myCloud.secure_url,
+//         };
+//       }
+
+//       if (existCourse && thumbnail.startsWith("https")) {
+//         data.thumbnail = {
+//           public_id: existCourse?.thumbnail.public_id,
+//           url: existCourse?.thumbnail.url,
+//         };
+//       }
+
+//       // Handling Curriculum
+//       if (curriculum && !curriculum.startsWith("https")) {
+//         await cloudinary.v2.uploader.destroy(existCourse.curriculum.public_id);
+
+//         const myCloud = await cloudinary.v2.uploader.upload(curriculum, {
+//           folder: "curriculums",
+//         });
+
+//         data.curriculum = {
+//           public_id: myCloud.public_id,
+//           url: myCloud.secure_url,
+//         };
+//       }
+
+//       if (existCourse && curriculum.startsWith("https")) {
+//         data.curriculum = {
+//           public_id: existCourse?.curriculum.public_id,
+//           url: existCourse?.curriculum.url,
+//         };
+//       }
+
+//       const updatedCourse = await CourseModel.findByIdAndUpdate(
+//         courseId,
+//         {
+//           $set: data,
+//         },
+//         { new: true }
+//       );
+
+//       const newCategory = categories?.categories.find(
+//         (category) => category.title === data.category
+//       );
+
+//       newCategory?.courses.push(updatedCourse?._id);
+
+//       await categories?.save();
+
+//       res.status(201).json({ success: true, course: updatedCourse });
+//     } catch (error: any) {
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   }
+// );
 
 // Get Single Course - Without purchasing
 export const getSingleCourse = CatchAsyncErrors(
