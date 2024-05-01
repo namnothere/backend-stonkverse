@@ -98,6 +98,6 @@
     "declaration": true,
     // "types": ["node", "express"],
     // "declarationDir": "./@types"
-  },
-  "include": ["@types"]
+  }
+  // "include": ["@types"],
 }

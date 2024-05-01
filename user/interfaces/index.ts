@@ -1,35 +1,35 @@
-interface IRegistrationBody {
+export interface IRegistrationBody {
   name: string;
   email: string;
   password: string;
   avatar?: string;
 }
 
-interface IActivationToken {
+export  interface IActivationToken {
   token: string;
   activationCode: string;
 }
 
-interface IActivationRequest {
+export  interface IActivationRequest {
   activation_token: string;
   activation_code: string;
 }
 
-interface ILoginRequest {
+export  interface ILoginRequest {
   email: string;
   password: string;
 }
 
-interface IUpdateUserInfo {
+export interface IUpdateUserInfo {
   name?: string;
   email?: string;
 }
 
-interface IUpdatePassword {
+export interface IUpdatePassword {
   oldPassword: string;
   newPassword: string;
 }
 
-interface IUpdateProfilePicture {
+export interface IUpdateProfilePicture {
   avatar: string;
 }

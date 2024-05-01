@@ -13,6 +13,7 @@ import { redis } from "../../utils/redis";
 import cloudinary from "cloudinary";
 import { MESSAGES, RESULT_STATUS } from "../../shared/common";
 import { CourseModel } from "../../course/models";
+import { IActivationRequest, IActivationToken, ILoginRequest, IRegistrationBody, IUpdatePassword, IUpdateProfilePicture, IUpdateUserInfo } from '../interfaces';
 
 require("dotenv").config();
 
@@ -36,7 +37,9 @@ export const registrationUser = CatchAsyncErrors(
       const activationToken = createActivationToken(user);
       const activationCode = activationToken.activationCode;
 
-      console.log(activationToken);
+      if (process.env.NODE_ENV === "development") {
+        console.log(activationToken);
+      }
 
       const data = { user: { name: user.name }, activationCode };
 
