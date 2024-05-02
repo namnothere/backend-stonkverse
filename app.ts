@@ -27,7 +27,8 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",
+      // "http://localhost:3000",
+      "https://frontend-stonkverse-v1.vercel.app",
     ],
     credentials: true,
   })
@@ -68,3 +69,8 @@ app.all("*", (req: Request, res: Response, next: NextFunction) => {
 app.use(limiter);
 
 app.use(ErrorMiddleware);
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
