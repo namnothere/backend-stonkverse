@@ -18,9 +18,11 @@ import {
   getSingleCourse,
   getUserCourses,
   uploadCourse,
-} from "../course/controllers/course.controller";
+  addQuestionQuiz,
+  addAnswerQuiz,
+} from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
-import { updateAccessToken } from "../user/controllers/user.controller";
+import { updateAccessToken } from "../user/controllers";
 
 const courseRouter = express.Router();
 
@@ -31,6 +33,8 @@ courseRouter.post(
   authorizeRoles("admin"),
   uploadCourse
 );
+
+
 
 courseRouter.put(
   "/edit-course/:id",
@@ -65,12 +69,21 @@ courseRouter.get(
 
 courseRouter.put(
   "/add-question",
-  updateAccessToken,
-  isAuthenticated,
+  // updateAccessToken,
+  // isAuthenticated,
   addQuestion
 );
 
+courseRouter.put(
+  "/add-quiz-question",
+  // updateAccessToken,
+  // isAuthenticated,
+  addQuestionQuiz
+);
+
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
+
+courseRouter.put("/add-answer-quiz", /*updateAccessToken, isAuthenticated,*/ addAnswerQuiz);
 
 courseRouter.put(
   "/add-review/:id",

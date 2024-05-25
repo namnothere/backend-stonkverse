@@ -13,7 +13,7 @@ interface ITokenOptions {
   domain?: string;
 }
 
-const ACCESS_TOKEN_EXPIRE = 5;
+const ACCESS_TOKEN_EXPIRE = 60;
 const REFRESH_TOKEN_EXPIRE = 3;
 
 export const accessTokenOptions = {

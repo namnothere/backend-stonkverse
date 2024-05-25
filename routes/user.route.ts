@@ -5,17 +5,20 @@ import {
   deleteUser,
   getAllUsers,
   getUserInfo,
+  getUserLearningProgress,
   loginUser,
   logoutUser,
   registrationUser,
+  resetUserLearningProgress,
   socialAuth,
   updateAccessToken,
   updateAccessTokenHandler,
+  updateLessonCompletion,
   updatePassword,
   updateProfilePicture,
   updateUserInfo,
   updateUserRole,
-} from "../user/controllers/user.controller";
+} from "../user/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 
 const userRouter = express.Router();
@@ -78,5 +81,9 @@ userRouter.delete(
   authorizeRoles("admin"),
   deleteUser
 );
+
+userRouter.get("/reset-user-progress", resetUserLearningProgress);
+userRouter.get("/user/progress/:courseId", updateAccessToken, isAuthenticated, getUserLearningProgress)
+userRouter.post("/user/progress/:courseId/:courseDataId", updateAccessToken, isAuthenticated, updateLessonCompletion)
 
 export default userRouter;

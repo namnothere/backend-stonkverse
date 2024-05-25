@@ -68,6 +68,23 @@ const userSchema: Schema<IUser> = new Schema(
   { timestamps: true }
 );
 
+export enum COURSE_DATA_STATUS {
+  NEW = 0,
+  DONE = 1
+}
+
+export interface ILearningProgress extends Document {
+  user: IUser;
+  courseId: string;
+  progress:  string[];
+}
+
+export const LearningProgressSchema = new Schema<ILearningProgress>({
+  user: { type: Schema.Types.ObjectId, ref: "User" },
+  courseId: String,
+  progress: [String]
+})
+
 userSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) {
     next();
@@ -96,3 +113,4 @@ userSchema.methods.comparePassword = async function (
 };
 
 export const userModel: Model<IUser> = mongoose.model("User", userSchema);
+export const learningProgressModel: Model<ILearningProgress> = mongoose.model("LearningProgress", LearningProgressSchema);

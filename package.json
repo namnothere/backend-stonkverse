@@ -8,10 +8,11 @@
     "node": "18.x"
   },
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only server.ts",
-    "start": "node build/server.js",
+    "dev": "set DEBUG=express:* & ts-node-dev --respawn --transpile-only server.ts",
+    "start": "set DEBUG=express:* & node build/server.js",
     "build": "tsc"
   },
+  "author": "Tamnhu",
   "license": "ISC",
   "dependencies": {
     "@types/bcryptjs": "^2.4.4",

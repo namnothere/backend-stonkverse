@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
-import CourseModel from "../models/course.model";
+import { CourseModel } from "../models";
 import { LayoutModel } from "../../layout/models";
 
 // Create course
@@ -22,3 +22,5 @@ export const createCourse = CatchAsyncErrors(
     res.status(201).json({ success: true, course, category: category });
   }
 );
+
+
