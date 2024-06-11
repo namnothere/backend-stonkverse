@@ -24,6 +24,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
+      "https://frontend-stonkverse-v1.vercel.app/"
     ],
     credentials: true,
   })
@@ -48,6 +49,11 @@ app.use(
   layoutRouter,
   contactRouter
 );
+
+//Testing the successfully deployed route
+app.get("/", (req: Request, res: Response) => {
+  res.status(200).json({ success: true, message: "Welcome to the API" });
+});
 
 // Testing API
 app.get("/test", (req: Request, res: Response, next: NextFunction) => {

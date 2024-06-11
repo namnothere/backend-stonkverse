@@ -1,7 +1,6 @@
 import express from "express";
 import {
   addAnswer,
-  addQuestion,
   addReplyToReview,
   addReview,
   deleteCourse,
@@ -14,11 +13,10 @@ import {
   getCourseByQuery,
   getCourseByUser,
   getCourseReviews,
-  getCoursesByCategory,
   getSingleCourse,
   getUserCourses,
   uploadCourse,
-  addQuestionQuiz,
+  addQuestion,
   addAnswerQuiz,
 } from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
@@ -50,7 +48,6 @@ courseRouter.get("/search-courses/:query", getCourseByQuery);
 courseRouter.get("/get-key-search/:query", getCoursesByKeySearch);
 
 courseRouter.get("/get-courses", getAllCourses);
-courseRouter.get("/get-courses/:categorySlug", getCoursesByCategory);
 
 courseRouter.get(
   "/get-course-content/:id",
@@ -65,20 +62,6 @@ courseRouter.get(
   isAuthenticated,
   authorizeRoles("admin"),
   getCourseByAdmin
-);
-
-courseRouter.put(
-  "/add-question",
-  // updateAccessToken,
-  // isAuthenticated,
-  addQuestion
-);
-
-courseRouter.put(
-  "/add-quiz-question",
-  // updateAccessToken,
-  // isAuthenticated,
-  addQuestionQuiz
 );
 
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
