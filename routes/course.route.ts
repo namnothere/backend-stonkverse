@@ -66,7 +66,7 @@ courseRouter.get(
 
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
 
-courseRouter.put("/add-answer-quiz", /*updateAccessToken, isAuthenticated,*/ addAnswerQuiz);
+courseRouter.put("/add-answer-quiz", updateAccessToken, isAuthenticated, addAnswerQuiz);
 
 courseRouter.put(
   "/add-review/:id",
