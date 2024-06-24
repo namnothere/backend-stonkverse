@@ -550,6 +550,9 @@ export const updateLessonCompletion = CatchAsyncErrors(
       }
 
       const { courseDataId, courseId } = req.params;
+      
+      console.log("courseDataId:",courseDataId)
+      console.log("courseId:",courseId)
 
       const learningProgress = await learningProgressModel.findOne({
         user,
@@ -559,6 +562,9 @@ export const updateLessonCompletion = CatchAsyncErrors(
       if (!learningProgress) {
         return next(new ErrorHandler(MESSAGES.LEARNING_PROGRESS_NOT_FOUND, 404));
       }
+
+      console.log("learningProgress:",learningProgress)
+
 
       if (!learningProgress.progress.includes(courseDataId)) {
         learningProgress.progress.push(courseDataId);

@@ -18,6 +18,7 @@ import {
   uploadCourse,
   addQuestion,
   addAnswerQuiz,
+  getAnswersQuiz,
 } from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../user/controllers";
@@ -64,10 +65,17 @@ courseRouter.get(
   getCourseByAdmin
 );
 
+courseRouter.put(
+  "/add-question",
+  updateAccessToken,
+  isAuthenticated,
+  addQuestion
+);
+
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
 
 courseRouter.put("/add-answer-quiz", updateAccessToken, isAuthenticated, addAnswerQuiz);
-
+courseRouter.get('/quiz/:contentId', updateAccessToken, isAuthenticated, getAnswersQuiz);
 courseRouter.put(
   "/add-review/:id",
   updateAccessToken,
@@ -109,5 +117,6 @@ courseRouter.delete(
   authorizeRoles("admin"),
   deleteCourse
 );
+
 
 export default courseRouter;

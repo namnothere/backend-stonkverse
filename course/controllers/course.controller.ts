@@ -3,13 +3,16 @@ import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import { NextFunction, Request, Response } from "express";
 import ErrorHandler from "../../utils/ErrorHandler";
 import { checkCourseContent, createCourseInDB, updateCourseInDB } from "../providers";
-import { CourseModel } from "../models";
+import { CourseModel, IAnswerQuiz, ICourse, ICourseData, IQuestionQuiz } from "../models";
 import { redis } from "../../utils/redis";
 import mongoose from "mongoose";
 import { sendMail } from "../../utils/sendMail";
 import { NotificationModel } from "../../models";
 import axios from "axios";
 import { LayoutModel } from "../../layout/models";
+import { getUserInfo } from "../../user/controllers";
+import { userModel } from "../../user/models";
+import { MESSAGES } from "../../shared/common";
 
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -51,7 +54,7 @@ export const uploadCourse = CatchAsyncErrors(
       if (!(await checkCourseContent(req.body.name))) {
         return res.status(400).json({
           success: false,
-          message: 'Can not create a course with inappropriate content.',
+          message: 'Can not create a course with inappropriate content',
         });
       }
 
@@ -112,7 +115,7 @@ export const editCourse = CatchAsyncErrors(
       if (!(await checkCourseContent(req.body.name))) {
         return res.status(400).json({
           success: false,
-          message: 'Cannot update the course with inappropriate content.',
+          message: 'Cannot update the course with inappropriate content',
         });
       }
 
@@ -171,26 +174,29 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         name: { $regex: query, $options: "i" },
-      }).select(
-        "name -_id"
-      );
+      }).select("thumbnail name ratings");
 
-      const notDuplicate = new Set();
+      console.log(courses[0]);
+
+      const notDuplicate = new Map();
 
       courses.forEach(course => {
         if (course.name) {
-          notDuplicate.add(course.name)
+          notDuplicate.set(course.name, {
+            name: course.name,
+            thumbnail: course.thumbnail.url,
+            ratings: course.ratings
+          });
         }
       });
 
-      const courseSearch = [...notDuplicate];
+      const courseSearch = Array.from(notDuplicate.values());
       console.log(courseSearch);
       // const courseSearch = courses.map((course) => {
       //   console.log(course.courseData); 
       //   return course.name;
       // }).flat();
       // console.log(courseSearch[0])
-
       res.status(200).json({ success: true, courseSearch });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -297,7 +303,6 @@ export const addQuestion = CatchAsyncErrors(
   }
 );
 
-// Add answer in course content
 interface IAddAnswerData {
   answer: string;
   courseId: string;
@@ -419,12 +424,12 @@ export const addAnswerQuiz = CatchAsyncErrors(
         totalScore += score;
         detailedScores[questionId] = score;
 
-        const newAnswer: any = { 
-          user: req.user?._id, 
-          answer, 
-          score 
+        const newAnswer: any = {
+          user: req.user?._id,
+          answer,
+          score
         };
-        
+
         question.answers.push(newAnswer);
       });
 
@@ -436,6 +441,55 @@ export const addAnswerQuiz = CatchAsyncErrors(
     }
   }
 );
+
+export const getAnswersQuiz = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+
+        const { contentId } = req.params;
+        const userId = req.user?._id;
+    
+        if (!userId) {
+          return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
+        }
+    
+        console.log("UserId req: ", userId);
+        console.log("ContentId req: ", contentId);
+    
+        const courses = await CourseModel.find({
+          'courseData._id': contentId,
+          'courseData.quiz.answers.user': userId,
+        }).select('courseData._id courseData.quiz._id courseData.quiz.answers');
+    
+        console.log("Courses found: ", courses);
+    
+        const answers: Record<string, Record<string, string[]>> = {};
+    
+        courses.forEach(course => {
+          course.courseData.forEach(data => {
+            console.log("Processing courseData: ", data._id);
+            if (data._id.toString() === contentId) {
+              data.quiz.forEach(quiz => {
+                console.log("Processing quiz: ", quiz._id);
+                if (quiz.answers && quiz.answers.length > 0) {
+                  const userAnswers = quiz.answers.filter(ans => ans.user?.toString() === userId.toString());
+                  console.log("Answers for quiz: ", quiz._id, userAnswers);
+                  if (userAnswers.length > 0) {
+                    if (!answers[data._id.toString()]) {
+                      answers[data._id.toString()] = {};
+                    }
+                    answers[data._id.toString()][quiz._id.toString()] = userAnswers[userAnswers.length - 1].answer;
+                  }
+                }
+              });
+            }
+          });
+        });
+    console.log("Final answers: ",answers );
+    res.status(200).json({ success: true, answers });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+};
 
 
 export const addReview = CatchAsyncErrors(
@@ -684,3 +738,33 @@ export const getCourseByQuery = CatchAsyncErrors(
     }
   }
 );
+
+// export const getRandomStock = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       // Replace with your actual API endpoint for stock data
+//       const apiUrl = "https://api.example.com/stockdata";
+      
+//       // Make API request to get stock data
+//       const response = await axios.get(apiUrl);
+
+//       // Extract random stock data (you need to adjust this based on your API response structure)
+//       const randomIndex = Math.floor(Math.random() * response.data.length);
+//       const randomStock = response.data[randomIndex];
+
+//       // Example response structure you want to send to the client
+//       const stockResponse = {
+//         name: randomStock.name,
+//         symbol: randomStock.symbol,
+//         price: randomStock.price,
+//         change: randomStock.change,
+//       };
+
+//       // Send the random stock data to the client
+//       res.status(200).json({ success: true, data: stockResponse });
+//     } catch (error: any) {
+//       // Handle errors
+//       next(error);
+//     }
+//   }
+// );
