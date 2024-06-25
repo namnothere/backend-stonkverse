@@ -739,32 +739,31 @@ export const getCourseByQuery = CatchAsyncErrors(
   }
 );
 
-// export const getRandomStock = CatchAsyncErrors(
-//   async (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//       // Replace with your actual API endpoint for stock data
-//       const apiUrl = "https://api.example.com/stockdata";
+export const getIndexStock = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const indexUrl = "https://stock-service-iota.vercel.app/historical_data/filter";
+      const response = await axios.get(indexUrl);
+      const data = response.data.data;
       
-//       // Make API request to get stock data
-//       const response = await axios.get(apiUrl);
+      if (data.length === 0) {
+        return next(new ErrorHandler("No data available", 400));
+      }
+      const randomIndex = Math.floor(Math.random() * data.length);
+      const randomData = data[randomIndex];
 
-//       // Extract random stock data (you need to adjust this based on your API response structure)
-//       const randomIndex = Math.floor(Math.random() * response.data.length);
-//       const randomStock = response.data[randomIndex];
+      const changePercent = ((randomData.close_price - randomData.open_price) / randomData.open_price) * 100;
 
-//       // Example response structure you want to send to the client
-//       const stockResponse = {
-//         name: randomStock.name,
-//         symbol: randomStock.symbol,
-//         price: randomStock.price,
-//         change: randomStock.change,
-//       };
+      const result = res.json({
+        symbol: randomData.symbol,
+        close_price: randomData.close_price,
+        change_percent: changePercent.toFixed(2)
+      });
 
-//       // Send the random stock data to the client
-//       res.status(200).json({ success: true, data: stockResponse });
-//     } catch (error: any) {
-//       // Handle errors
-//       next(error);
-//     }
-//   }
-// );
+      res.status(200).json({ success: true, result });
+
+    }  catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);

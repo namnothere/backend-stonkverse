@@ -19,6 +19,7 @@ import {
   addQuestion,
   addAnswerQuiz,
   getAnswersQuiz,
+  getIndexStock,
 } from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../user/controllers";
@@ -118,5 +119,6 @@ courseRouter.delete(
   deleteCourse
 );
 
+courseRouter.get("/get-index", getIndexStock);
 
 export default courseRouter;
