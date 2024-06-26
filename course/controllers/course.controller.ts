@@ -31,8 +31,8 @@ export const uploadCourse = CatchAsyncErrors(
           url: myCloud.secure_url,
         };
       }
-
       if (curriculum) {
+        
         const myCloudCurri = await cloudinary.v2.uploader.upload(curriculum, {
           resource_type: "auto",
           folder: "curriculums",
@@ -47,7 +47,6 @@ export const uploadCourse = CatchAsyncErrors(
           public_id: myCloudCurri.public_id,
           url: myCloudCurri.secure_url,
         };
-        // console.log("This",myCloudCurri)
       }
       // console.log('Quiz data:', data.courseData[0].quiz);
 
@@ -742,7 +741,7 @@ export const getCourseByQuery = CatchAsyncErrors(
 export const getIndexStock = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const indexUrl = "https://stock-service-iota.vercel.app/historical_data/filter";
+      const indexUrl = "http://207.148.64.246:8080/historical_data/filter";
       const response = await axios.get(indexUrl);
       const data = response.data.data;
       
