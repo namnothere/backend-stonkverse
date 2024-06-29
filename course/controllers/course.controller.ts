@@ -451,27 +451,27 @@ export const getAnswersQuiz = async (req: Request, res: Response, next: NextFunc
           return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
         }
     
-        console.log("UserId req: ", userId);
-        console.log("ContentId req: ", contentId);
+        // console.log("UserId req: ", userId);
+        // console.log("ContentId req: ", contentId);
     
         const courses = await CourseModel.find({
           'courseData._id': contentId,
           'courseData.quiz.answers.user': userId,
         }).select('courseData._id courseData.quiz._id courseData.quiz.answers');
     
-        console.log("Courses found: ", courses);
+        // console.log("Courses found: ", courses);
     
         const answers: Record<string, Record<string, string[]>> = {};
     
         courses.forEach(course => {
           course.courseData.forEach(data => {
-            console.log("Processing courseData: ", data._id);
+            // console.log("Processing courseData: ", data._id);
             if (data._id.toString() === contentId) {
               data.quiz.forEach(quiz => {
-                console.log("Processing quiz: ", quiz._id);
+                // console.log("Processing quiz: ", quiz._id);
                 if (quiz.answers && quiz.answers.length > 0) {
                   const userAnswers = quiz.answers.filter(ans => ans.user?.toString() === userId.toString());
-                  console.log("Answers for quiz: ", quiz._id, userAnswers);
+                  // console.log("Answers for quiz: ", quiz._id, userAnswers);
                   if (userAnswers.length > 0) {
                     if (!answers[data._id.toString()]) {
                       answers[data._id.toString()] = {};

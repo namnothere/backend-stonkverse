@@ -521,6 +521,7 @@ export const getUserLearningProgress = CatchAsyncErrors(
       }
       
       const courseId = req.params.courseId;
+      console.log("get courseid: ", courseId)
       if (!courseId) {
         return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 400));
       }
@@ -528,6 +529,7 @@ export const getUserLearningProgress = CatchAsyncErrors(
         user,
         courseId
       });
+      console.log("get learningProgress: ", learningProgress)
 
       if (!learningProgress) {
         return next(new ErrorHandler(MESSAGES.LEARNING_PROGRESS_NOT_FOUND, 404));
@@ -541,40 +543,42 @@ export const getUserLearningProgress = CatchAsyncErrors(
   }
 )
 
+
 export const updateLessonCompletion = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = await userModel.findById(req.user?._id);
+      const user = await userModel.findById(req?.user?._id);
       if (!user) {
         return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
       }
-
       const { courseDataId, courseId } = req.params;
-      
+
+      let learningProgress = await learningProgressModel.findOne({ user, courseId });
+   
       console.log("courseDataId:",courseDataId)
       console.log("courseId:",courseId)
-
-      const learningProgress = await learningProgressModel.findOne({
-        user,
-        courseId
-      });
-
-      if (!learningProgress) {
-        return next(new ErrorHandler(MESSAGES.LEARNING_PROGRESS_NOT_FOUND, 404));
-      }
-
+      console.log("userid:",user)
       console.log("learningProgress:",learningProgress)
 
+      if (!learningProgress) {
+        learningProgress = new learningProgressModel({
+          user,
+          courseId,
+          progress: [courseDataId], 
+        });
+        await learningProgress.save();
+        return res.status(201).json({ result: RESULT_STATUS.SUCCESS, learningProgress });
+      }
 
       if (!learningProgress.progress.includes(courseDataId)) {
         learningProgress.progress.push(courseDataId);
         await learningProgress.save();
       }
-      
+
       res.status(200).json({ result: RESULT_STATUS.SUCCESS, learningProgress });
 
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
   }
-)
+);
