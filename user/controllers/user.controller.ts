@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { userModel, IUser, learningProgressModel } from "../models";
+import { userModel, IUser, learningProgressModel, COURSE_DATA_STATUS } from "../models";
 import ErrorHandler from "../../utils/ErrorHandler";
 import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
@@ -582,3 +582,5 @@ export const updateLessonCompletion = CatchAsyncErrors(
     }
   }
 );
+
+

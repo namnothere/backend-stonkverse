@@ -345,14 +345,14 @@ export const addAnswer = CatchAsyncErrors(
 
       await course?.save();
 
-      // Notify to the admin (LATER)
       if (req.user?._id === question.user._id) {
         await NotificationModel.create({
           user: req.user?._id,
-          title: "New Question Reply Created",
+          title: "New Question Reply Received",
           message: `You have a new question reply in ${courseContent.title}`,
         });
       } else {
+
         const data = { name: question.user.name, title: courseContent.title };
 
         try {
@@ -763,6 +763,109 @@ export const getIndexStock = CatchAsyncErrors(
 
     }  catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// export const getCurrentUserProgress = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const { courseIds } = req.body;
+//       const userId = req.user?._id;
+
+//       const courses = await CourseModel.find({
+//         _id: { $in: courseIds },
+//       }).populate('courseData.quiz.answers.user');
+
+//       const courseScores = courses.map((course: ICourse) => {
+//         let totalScore = 0;
+//         let totalMaxScore = 0;
+
+//         course.courseData.forEach((data: ICourseData) => {
+//           data.quiz.forEach((question: IQuestionQuiz) => {
+//             let latestAnswer: IAnswerQuiz | undefined;
+//             question.answers.forEach((answer: IAnswerQuiz) => {
+//               if (
+//                 answer.user._id.equals(userId) &&
+//                 (!latestAnswer || answer.createdAt > latestAnswer.createdAt)
+//               ) {
+//                 latestAnswer = answer;
+//               }
+//             });
+
+//             if (latestAnswer) {
+//               totalScore += latestAnswer.score;
+//             }
+//             totalMaxScore += question.maxScore;
+//           });
+//         });
+
+//         const completionRate = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+//         return {
+//           courseId: course._id,
+//           courseName: course.name,
+//           totalScore,
+//           totalMaxScore,
+//           completionRate,
+//         };
+//       });
+
+//       res.status(200).json({ success: true, courseScores });
+//     } catch (error: any) {
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   }
+// );
+export const getCurrentUserProgress = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseIds } = req.body;
+      const userId = req.user?._id;
+
+      const courses = await CourseModel.find({
+        _id: { $in: courseIds },
+      }).populate('courseData.quiz.answers.user');
+
+      const courseScores = courses.map((course: ICourse) => {
+        let totalScore = 0;
+        let totalMaxScore = 0;
+
+        const quizScores = course.courseData.flatMap((data: ICourseData) =>
+          data.quiz.map((question: IQuestionQuiz) => {
+            let latestAnswer: IAnswerQuiz | undefined;
+            question.answers.forEach((answer: IAnswerQuiz) => {
+              if (
+                answer.user._id.equals(userId) &&
+                (!latestAnswer || answer.createdAt > latestAnswer.createdAt)
+              ) {
+                latestAnswer = answer;
+              }
+            });
+
+            const score = latestAnswer ? latestAnswer.score : 0;
+            totalScore += score;
+            totalMaxScore += question.maxScore;
+
+            return { title: question.title || "", score };
+          })
+        );
+
+        const completionRate =
+          totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+
+        return {
+          courseId: course._id,
+          courseName: course.name,
+          totalScore,
+          totalMaxScore,
+          completionRate,
+          quizScores,
+        };
+      });
+
+      res.status(200).json({ success: true, courseScores });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
     }
   }
 );

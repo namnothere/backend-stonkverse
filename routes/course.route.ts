@@ -20,6 +20,7 @@ import {
   addAnswerQuiz,
   getAnswersQuiz,
   getIndexStock,
+  getCurrentUserProgress,
 } from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../user/controllers";
@@ -76,6 +77,7 @@ courseRouter.put(
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
 
 courseRouter.put("/add-answer-quiz", updateAccessToken, isAuthenticated, addAnswerQuiz);
+
 courseRouter.get('/quiz/:contentId', updateAccessToken, isAuthenticated, getAnswersQuiz);
 courseRouter.put(
   "/add-review/:id",
@@ -120,5 +122,8 @@ courseRouter.delete(
 );
 
 courseRouter.get("/get-index", getIndexStock);
+
+courseRouter.post("/get-user-progress", updateAccessToken, isAuthenticated, getCurrentUserProgress);
+// courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
 export default courseRouter;

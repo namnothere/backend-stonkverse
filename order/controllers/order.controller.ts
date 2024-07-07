@@ -37,7 +37,6 @@ export const createOrder = CatchAsyncErrors(
         (course: any) => course.courseId === courseId
       );
 
-      // Course đã mua rồi thì không thể mua lại nữa
       if (courseExistInUser) {
         return next(
           new ErrorHandler("You have already purchased this course", 400)
@@ -135,7 +134,7 @@ export const newPayment = CatchAsyncErrors(
         amount: req.body.amount,
         currency: "USD",
         metadata: {
-          company: "E-Learning",
+          company: "Stock E-Learning",
         },
         automatic_payment_methods: {
           enabled: true,
