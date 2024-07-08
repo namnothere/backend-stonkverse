@@ -2,16 +2,18 @@ import cloudinary from "cloudinary";
 import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import { NextFunction, Request, Response } from "express";
 import ErrorHandler from "../../utils/ErrorHandler";
-import { createCourse } from "../providers";
-import { CourseModel } from "../models";
+import { checkCourseContent, createCourseInDB, updateCourseInDB } from "../providers";
+import { CourseModel, IAnswerQuiz, ICourse, ICourseData, IQuestionQuiz } from "../models";
 import { redis } from "../../utils/redis";
 import mongoose from "mongoose";
 import { sendMail } from "../../utils/sendMail";
 import { NotificationModel } from "../../models";
 import axios from "axios";
 import { LayoutModel } from "../../layout/models";
+import { getUserInfo } from "../../user/controllers";
+import { userModel } from "../../user/models";
+import { MESSAGES } from "../../shared/common";
 
-// Upload course
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -19,7 +21,6 @@ export const uploadCourse = CatchAsyncErrors(
       const thumbnail = data.thumbnail;
       const curriculum = data.curriculum;
 
-      // Upload thumbnail
       if (thumbnail) {
         const myCloud = await cloudinary.v2.uploader.upload(thumbnail, {
           folder: "courses",
@@ -30,122 +31,105 @@ export const uploadCourse = CatchAsyncErrors(
           url: myCloud.secure_url,
         };
       }
-
-      // Upload curriculum
       if (curriculum) {
+        
         const myCloudCurri = await cloudinary.v2.uploader.upload(curriculum, {
+          resource_type: "auto",
           folder: "curriculums",
-          resource_type: "raw", // Nếu là PDF hoặc tệp tài liệu
+          // }).then((result) => {
+          //     console.log("Upload successful");
+          //     console.log(result);
+          // }).catch((error) => {
+          //     console.log("An error occurred:");
+          //     console.log(error);
         });
         data.curriculum = {
           public_id: myCloudCurri.public_id,
           url: myCloudCurri.secure_url,
         };
       }
+      // console.log('Quiz data:', data.courseData[0].quiz);
 
-      createCourse(data, res, next);
+      if (!(await checkCourseContent(req.body.name))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Can not create a course with inappropriate content',
+        });
+      }
+
+      const course = await createCourseInDB(data, res, next);
+      res.status(201).json({ success: true, course });
+
+
     } catch (error: any) {
-      return next(new ErrorHandler(error.message, 500));
+      next(new ErrorHandler(error.message, error.status || 500));
     }
   }
 );
 
-// Edit Course
 export const editCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = req.body;
-      const thumbnail = data.thumbnail;
-      const curriculum = data.curriculum;
       const courseId = req.params.id;
 
       let existCourse: any = await CourseModel.findById(courseId);
 
       if (!existCourse) {
         res.status(404).json({ success: false, message: "Course not found" });
+        return;
       }
 
-      const categories = await LayoutModel.findOne({ type: "Categories" });
-
-      const oldCategory = categories?.categories.find(
-        (category) => category.title === existCourse.category
-      );
-
-      if (oldCategory) {
-        const courseIndex = oldCategory?.courses?.findIndex(
-          (course: any) => course.toString() === existCourse._id.toString()
-        );
-
-        oldCategory.courses?.splice(courseIndex, 1);
-      }
-
-      // Handling thumbnail updates
-      if (thumbnail && !thumbnail.startsWith("https")) {
-        await cloudinary.v2.uploader.destroy(existCourse.thumbnail.public_id);
-
-        const myCloud = await cloudinary.v2.uploader.upload(thumbnail, {
-          folder: "courses",
-        });
-
-        data.thumbnail = {
-          public_id: myCloud.public_id,
-          url: myCloud.secure_url,
-        };
-      }
-
-      if (existCourse && thumbnail.startsWith("https")) {
-        data.thumbnail = {
-          public_id: existCourse?.thumbnail.public_id,
-          url: existCourse?.thumbnail.url,
-        };
-      }
-      
-       // Handling curriculum updates
-       if (curriculum && !curriculum.startsWith("https")) {
-        if (existCourse.curriculum && existCourse.curriculum.public_id) {
-          await cloudinary.v2.uploader.destroy(existCourse.curriculum.public_id, {
-            resource_type: 'raw'
+      if (data.thumbnail) {
+        const thumbnail = data.thumbnail;
+        if (!thumbnail.startsWith("https")) {
+          const thumbnailCloud = await cloudinary.v2.uploader.upload(thumbnail, {
+            folder: "courses",
+            resource_type: "auto",
+            allowedFormats: ["jpg", "png", "pdf"],
           });
+          data.thumbnail = {
+            public_id: thumbnailCloud.public_id,
+            url: thumbnailCloud.secure_url,
+          };
         }
-        const curriculumCloud = await cloudinary.v2.uploader.upload(curriculum, {
-          resource_type: 'raw',
-          folder: "curriculums",
-        });
-        data.curriculum = {
-          public_id: curriculumCloud.public_id,
-          url: curriculumCloud.secure_url,
-        };
-      } else if (curriculum.startsWith("https")) {
-        data.curriculum = {
-          public_id: existCourse.curriculum.public_id,
-          url: existCourse.curriculum.url,
-        };
       }
 
-      const updatedCourse = await CourseModel.findByIdAndUpdate(
-        courseId,
-        {
-          $set: data,
-        },
-        { new: true }
-      );
+      if (data.curriculum) {
+        const curriculum = data.curriculum;
+        if (!curriculum.startsWith("https")) {
+          const curriculumCloud = await cloudinary.v2.uploader.upload(curriculum, {
+            resource_type: "auto",
+            folder: "curriculums",
+            allowedFormats: ["jpg", "png", "pdf"],
 
-      const newCategory = categories?.categories.find(
-        (category) => category.title === data.category
-      );
+          });
+          data.curriculum = {
+            public_id: curriculumCloud.public_id,
+            url: curriculumCloud.secure_url,
+          };
+        }
+      }
 
-      newCategory?.courses.push(updatedCourse?._id);
+      if (!(await checkCourseContent(req.body.name))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot update the course with inappropriate content',
+        });
+      }
 
-      await categories?.save();
-
-      res.status(201).json({ success: true, course: updatedCourse });
+      const updatedCourse = await updateCourseInDB(courseId, req.body);
+      if (!updatedCourse) {
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+      res.status(200).json({ success: true, course: updatedCourse });
     } catch (error: any) {
-      return next(new ErrorHandler(error.message, 500));
+      next(new ErrorHandler(error.message, error.status || 500));
     }
   }
 );
 
-// Get Single Course - Without purchasing
+
 export const getSingleCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -168,7 +152,6 @@ export const getSingleCourse = CatchAsyncErrors(
   }
 );
 
-// Get All Courses - Without purchasing
 export const getAllCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -183,32 +166,6 @@ export const getAllCourses = CatchAsyncErrors(
   }
 );
 
-// Get Courses By Category
-export const getCoursesByCategory = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { categorySlug } = req.params;
-
-      const categoryLowerCase = categorySlug.replace(/-/g, " ");
-
-      const arr = categoryLowerCase.split(" ");
-      for (var i = 0; i < arr.length; i++) {
-        arr[i] = arr[i].charAt(0).toUpperCase() + arr[i].slice(1);
-      }
-      const category = arr.join(" ");
-
-      const courses = await CourseModel.find({ category }).select(
-        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
-      );
-
-      res.status(200).json({ success: true, courses, category });
-    } catch (error: any) {
-      return next(new ErrorHandler(error.message, 500));
-    }
-  }
-);
-
-// Get Courses By Key Search: Remember add thumbnail
 export const getCoursesByKeySearch = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -216,27 +173,29 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         name: { $regex: query, $options: "i" },
-      }).select(
-        "name -_id"
-      );
-      // check trùng
-      const notDuplicate = new Set();
+      }).select("thumbnail name ratings");
+
+      console.log(courses[0]);
+
+      const notDuplicate = new Map();
 
       courses.forEach(course => {
         if (course.name) {
-          notDuplicate.add(course.name)
+          notDuplicate.set(course.name, {
+            name: course.name,
+            thumbnail: course.thumbnail.url,
+            ratings: course.ratings
+          });
         }
       });
 
-      const courseSearch = [...notDuplicate];
+      const courseSearch = Array.from(notDuplicate.values());
       console.log(courseSearch);
       // const courseSearch = courses.map((course) => {
-      //   console.log(course.courseData); // Truy cập và in ra courseData
-
+      //   console.log(course.courseData); 
       //   return course.name;
       // }).flat();
       // console.log(courseSearch[0])
-
       res.status(200).json({ success: true, courseSearch });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -244,7 +203,6 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
   }
 );
 
-// Get course content - only for valid user
 export const getCourseByUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -273,7 +231,7 @@ export const getCourseByUser = CatchAsyncErrors(
   }
 );
 
-// Get course for admin page
+
 export const getCourseByAdmin = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -287,7 +245,7 @@ export const getCourseByAdmin = CatchAsyncErrors(
   }
 );
 
-// Add questions in course
+
 interface IAddQuestionData {
   title: string;
   question: string;
@@ -301,7 +259,7 @@ export const addQuestion = CatchAsyncErrors(
       const { title, question, courseId, contentId } =
         req.body as IAddQuestionData;
       const course = await CourseModel.findById(courseId);
-      console.log(req.body)
+      // console.log("test: ",course)
 
       if (!course) {
         return next(new ErrorHandler("Course not found", 404));
@@ -319,7 +277,6 @@ export const addQuestion = CatchAsyncErrors(
         return next(new ErrorHandler("Invalid content id", 400));
       }
 
-      // Create new question object
       const newQuestion: any = {
         user: req.user?._id,
         title,
@@ -327,17 +284,15 @@ export const addQuestion = CatchAsyncErrors(
         questionReplies: [],
       };
 
-      // Add question to course content
       courseContent.questions.push(newQuestion);
 
-      // Create notification
+      // [LATER]
       const notification = await NotificationModel.create({
         user: req.user?._id,
         title: "New Question Created",
         message: `You have a new question in ${courseContent.title}`,
       });
 
-      // Save updated course
       await course?.save();
 
       res.status(200).json({ success: true, course });
@@ -347,7 +302,6 @@ export const addQuestion = CatchAsyncErrors(
   }
 );
 
-// Add answer in course content
 interface IAddAnswerData {
   answer: string;
   courseId: string;
@@ -385,23 +339,20 @@ export const addAnswer = CatchAsyncErrors(
         return next(new ErrorHandler("Invalid content id", 400));
       }
 
-      // Create new answer object
       const newAnswer: any = { user: req.user?._id, answer };
 
-      // Add answer to course content
       question.questionReplies.push(newAnswer);
 
       await course?.save();
 
-      // Gửi notification về Admin dashboard khi có answer mới
       if (req.user?._id === question.user._id) {
         await NotificationModel.create({
           user: req.user?._id,
-          title: "New Question Reply Created",
+          title: "New Question Reply Received",
           message: `You have a new question reply in ${courseContent.title}`,
         });
       } else {
-        // Gửi email thông báo về cho người đặt question khi question có answer mới
+
         const data = { name: question.user.name, title: courseContent.title };
 
         try {
@@ -423,153 +374,123 @@ export const addAnswer = CatchAsyncErrors(
   }
 );
 
-// Add quiz
-interface IAddQuestionQuiz {
-  question: string;
-  correctAnswer: string;
-  courseId: string;
-  contentId: string;
-}
-
-export const addQuestionQuiz = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { question, correctAnswer, courseId, contentId } =
-        req.body as IAddQuestionQuiz;
-      const course = await CourseModel.findById(courseId);
-      console.log(req.body)
-
-      // Check course
-      if (!course) {
-        return next(new ErrorHandler("Course not found", 404));
-      }
-
-      if (!mongoose.Types.ObjectId.isValid(contentId)) {
-        return next(new ErrorHandler("Invalid content id", 400));
-      }
-
-      // Check video of course
-      const courseContent = course?.courseData?.find((item: any) =>
-        item._id.equals(contentId)
-      );
-
-      if (!courseContent) {
-        return next(new ErrorHandler("Do not have any source", 400));
-      }
-
-      // Create new QUIZ question
-      const newQuiz: any = {
-        user: req.user?._id,
-        question,
-        correctAnswer,
-        answers: [],
-
-      };
-
-      // Add quiz to course content
-      courseContent.quizzes.push({ ...newQuiz, maxScore: 10 });
-
-      // Create notification
-      const notification = await NotificationModel.create({
-        user: req.user?._id,
-        title: "New Quiz Created",
-        message: `A new quiz was added to ${courseContent.title}`,
-      });
-
-      // Save updated course
-      await course?.save();
-
-      res.status(200).json({ success: true, course });
-    } catch (error: any) {
-      return next(new ErrorHandler(error.message, 500));
-    }
-  }
-);
-
-// Add answer in quiz
 interface IAddAnswerQuizz {
   courseId: string;
   contentId: string;
-  questionId: string;
-  answer: string;
-  score: Number,
+  answers: {
+
+    questionId: string;
+    answer: string[];
+  }[];
+  score: number,
 }
 
 export const addAnswerQuiz = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { answer, courseId, contentId, questionId } =
-        req.body as IAddAnswerQuizz;
+      const { courseId, contentId, answers } = req.body as IAddAnswerQuizz;
 
       const course = await CourseModel.findById(courseId).populate(
-        "courseData.quizzes.user"
+        "courseData.quiz.user"
       );
-      console.log(req.body)
-
       if (!mongoose.Types.ObjectId.isValid(contentId)) {
-        return next(new ErrorHandler("Invalid content id", 400));
+        return next(new ErrorHandler("Course not found", 400));
       }
 
       const courseContent = course?.courseData?.find((item: any) =>
         item._id.equals(contentId)
       );
-
       if (!courseContent) {
-        return next(new ErrorHandler("Do not have any sources", 400));
+        return next(new ErrorHandler("Video not found", 400));
       }
 
-      const question = courseContent.quizzes.find((item: any) =>
-        item._id.equals(questionId)
-      );
+      let totalScore = 0;
+      let detailedScores: { [key: string]: number } = {};
 
-      if (!question) {
-        return next(new ErrorHandler("Invalid content id", 400));
-      }
+      answers.forEach(answerObj => {
+        const { questionId, answer } = answerObj;
+        const question = courseContent.quiz.find((item) => item._id.equals(questionId));
+        if (!question) {
+          return;
+        }
 
-      const score = question.correctAnswer === answer ? 10 : 0;
+        let score = 0;
+        if (Array.isArray(question.correctAnswer)) {
+          score = question.correctAnswer.every((val) => answer.includes(val)) ? question.maxScore : 0;
+        } else {
+          score = question.correctAnswer === answer[0] ? question.maxScore : 0;
+        }
+        totalScore += score;
+        detailedScores[questionId] = score;
 
-      // Create new answer object
-      const newAnswer: any = { user: req.user?._id, answer, score };
+        const newAnswer: any = {
+          user: req.user?._id,
+          answer,
+          score
+        };
 
-      // Add answer to course content
-      question.answers.push(newAnswer);
+        question.answers.push(newAnswer);
+      });
 
       await course?.save();
 
-      // Gửi notification về Admin dashboard khi có answer mới
-      // if (req.user?._id === question.user._id) {
-      //   await NotificationModel.create({
-      //     user: req.user?._id,
-      //     title: "New Question Reply Created",
-      //     message: `You have a new question reply in ${courseContent.title}`,
-      //   });
-      // } else {
-
-      // Gửi email thông báo về cho người đặt question khi question có answer mới
-      if (question.user && question.user.name) { // Kiểm tra xem question.user tồn tại và có trường name không
-        const data = { name: question.user.name, title: courseContent.title };
-
-        try {
-          await sendMail({
-            email: question.user.email,
-            subject: "Question Reply",
-            template: "question-reply.ejs",
-            data,
-          });
-        } catch (error: any) {
-          return next(new ErrorHandler(error.message, 500));
-        }
-      }
-
-
-      res.status(200).json({ success: true, course });
+      res.status(200).json({ success: true, totalScore, detailedScores });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
   }
 );
 
-// Add review in course
+export const getAnswersQuiz = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+
+        const { contentId } = req.params;
+        const userId = req.user?._id;
+    
+        if (!userId) {
+          return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
+        }
+    
+        // console.log("UserId req: ", userId);
+        // console.log("ContentId req: ", contentId);
+    
+        const courses = await CourseModel.find({
+          'courseData._id': contentId,
+          'courseData.quiz.answers.user': userId,
+        }).select('courseData._id courseData.quiz._id courseData.quiz.answers');
+    
+        // console.log("Courses found: ", courses);
+    
+        const answers: Record<string, Record<string, string[]>> = {};
+    
+        courses.forEach(course => {
+          course.courseData.forEach(data => {
+            // console.log("Processing courseData: ", data._id);
+            if (data._id.toString() === contentId) {
+              data.quiz.forEach(quiz => {
+                // console.log("Processing quiz: ", quiz._id);
+                if (quiz.answers && quiz.answers.length > 0) {
+                  const userAnswers = quiz.answers.filter(ans => ans.user?.toString() === userId.toString());
+                  // console.log("Answers for quiz: ", quiz._id, userAnswers);
+                  if (userAnswers.length > 0) {
+                    if (!answers[data._id.toString()]) {
+                      answers[data._id.toString()] = {};
+                    }
+                    answers[data._id.toString()][quiz._id.toString()] = userAnswers[userAnswers.length - 1].answer;
+                  }
+                }
+              });
+            }
+          });
+        });
+    console.log("Final answers: ",answers );
+    res.status(200).json({ success: true, answers });
+  } catch (error: any) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+};
+
+
 export const addReview = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -577,7 +498,6 @@ export const addReview = CatchAsyncErrors(
 
       const courseId = req.params.id;
 
-      // Check if courseId already exists in userCourseList
       const courseExists = userCourseList?.find(
         (course: any) => course.courseId === courseId.toString()
       );
@@ -601,7 +521,6 @@ export const addReview = CatchAsyncErrors(
 
         course.reviews.push(reviewData);
 
-        // Cập ratings của course sau khi vừa thêm 1 review mới
         const totalRatings =
           course?.reviews.reduce((acc, cur) => acc + cur.rating, 0) || 0;
 
@@ -615,7 +534,6 @@ export const addReview = CatchAsyncErrors(
           "reviews.user"
         );
 
-        // Push notification về Admin
         const notification = {
           title: "New Review Created",
           message: `${req.user?.name} has given a review in ${course?.name}`,
@@ -641,14 +559,18 @@ interface IAddReviewData {
   reviewId: string;
 }
 
-// Add review reply - only Admin
+
 export const addReplyToReview = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { answer, courseId, reviewId } = req.body as IAddReviewData;
       const course = await CourseModel.findById(courseId);
+      console.log("courseId:", courseId);
+      console.log("reviewId:", reviewId);
+      console.log("answer:", answer);
 
       if (!course) {
+        console.log("Loi:")
         return next(new ErrorHandler("Found no course", 404));
       }
 
@@ -680,7 +602,7 @@ export const addReplyToReview = CatchAsyncErrors(
   }
 );
 
-// Get all courses
+
 export const getAllCoursesAdmin = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -693,7 +615,7 @@ export const getAllCoursesAdmin = CatchAsyncErrors(
   }
 );
 
-// Get user's courses
+
 export const getUserCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -711,7 +633,7 @@ export const getUserCourses = CatchAsyncErrors(
   }
 );
 
-// Delete course
+
 export const deleteCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -752,7 +674,7 @@ export const deleteCourse = CatchAsyncErrors(
   }
 );
 
-// Generate Video URL
+
 export const generateVideoUrl = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -777,7 +699,6 @@ export const generateVideoUrl = CatchAsyncErrors(
   }
 );
 
-// Generate Course Reviews
 export const getCourseReviews = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -798,7 +719,7 @@ export const getCourseReviews = CatchAsyncErrors(
   }
 );
 
-// Get Course By Query
+
 export const getCourseByQuery = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -813,6 +734,138 @@ export const getCourseByQuery = CatchAsyncErrors(
       res.status(200).json({ success: true, courses });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+export const getIndexStock = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const indexUrl = "http://207.148.64.246:8080/historical_data/filter";
+      const response = await axios.get(indexUrl);
+      const data = response.data.data;
+      
+      if (data.length === 0) {
+        return next(new ErrorHandler("No data available", 400));
+      }
+      const randomIndex = Math.floor(Math.random() * data.length);
+      const randomData = data[randomIndex];
+
+      const changePercent = ((randomData.close_price - randomData.open_price) / randomData.open_price) * 100;
+
+      const result = res.json({
+        symbol: randomData.symbol,
+        close_price: randomData.close_price,
+        change_percent: changePercent.toFixed(2)
+      });
+
+      res.status(200).json({ success: true, result });
+
+    }  catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// export const getCurrentUserProgress = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const { courseIds } = req.body;
+//       const userId = req.user?._id;
+
+//       const courses = await CourseModel.find({
+//         _id: { $in: courseIds },
+//       }).populate('courseData.quiz.answers.user');
+
+//       const courseScores = courses.map((course: ICourse) => {
+//         let totalScore = 0;
+//         let totalMaxScore = 0;
+
+//         course.courseData.forEach((data: ICourseData) => {
+//           data.quiz.forEach((question: IQuestionQuiz) => {
+//             let latestAnswer: IAnswerQuiz | undefined;
+//             question.answers.forEach((answer: IAnswerQuiz) => {
+//               if (
+//                 answer.user._id.equals(userId) &&
+//                 (!latestAnswer || answer.createdAt > latestAnswer.createdAt)
+//               ) {
+//                 latestAnswer = answer;
+//               }
+//             });
+
+//             if (latestAnswer) {
+//               totalScore += latestAnswer.score;
+//             }
+//             totalMaxScore += question.maxScore;
+//           });
+//         });
+
+//         const completionRate = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+//         return {
+//           courseId: course._id,
+//           courseName: course.name,
+//           totalScore,
+//           totalMaxScore,
+//           completionRate,
+//         };
+//       });
+
+//       res.status(200).json({ success: true, courseScores });
+//     } catch (error: any) {
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   }
+// );
+export const getCurrentUserProgress = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseIds } = req.body;
+      const userId = req.user?._id;
+
+      const courses = await CourseModel.find({
+        _id: { $in: courseIds },
+      }).populate('courseData.quiz.answers.user');
+
+      const courseScores = courses.map((course: ICourse) => {
+        let totalScore = 0;
+        let totalMaxScore = 0;
+
+        const quizScores = course.courseData.flatMap((data: ICourseData) =>
+          data.quiz.map((question: IQuestionQuiz) => {
+            let latestAnswer: IAnswerQuiz | undefined;
+            question.answers.forEach((answer: IAnswerQuiz) => {
+              if (
+                answer.user._id.equals(userId) &&
+                (!latestAnswer || answer.createdAt > latestAnswer.createdAt)
+              ) {
+                latestAnswer = answer;
+              }
+            });
+
+            const score = latestAnswer ? latestAnswer.score : 0;
+            totalScore += score;
+            totalMaxScore += question.maxScore;
+
+            return { title: question.title || "", score };
+          })
+        );
+
+        const completionRate =
+          totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+
+        return {
+          courseId: course._id,
+          courseName: course.name,
+          totalScore,
+          totalMaxScore,
+          completionRate,
+          quizScores,
+        };
+      });
+
+      res.status(200).json({ success: true, courseScores });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
     }
   }
 );

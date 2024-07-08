@@ -31,7 +31,6 @@ export async function generateLast12MonthsData<T>(
       year: "numeric",
     });
 
-    // Đếm số Document được tạo ra trong tháng
     const count = await model.countDocuments({
       createdAt: { $gte: startDate, $lt: endDate },
     });

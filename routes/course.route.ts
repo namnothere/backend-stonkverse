@@ -1,7 +1,6 @@
 import express from "express";
 import {
   addAnswer,
-  addQuestion,
   addReplyToReview,
   addReview,
   deleteCourse,
@@ -14,12 +13,14 @@ import {
   getCourseByQuery,
   getCourseByUser,
   getCourseReviews,
-  getCoursesByCategory,
   getSingleCourse,
   getUserCourses,
   uploadCourse,
-  addQuestionQuiz,
+  addQuestion,
   addAnswerQuiz,
+  getAnswersQuiz,
+  getIndexStock,
+  getCurrentUserProgress,
 } from "../course/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../user/controllers";
@@ -50,7 +51,6 @@ courseRouter.get("/search-courses/:query", getCourseByQuery);
 courseRouter.get("/get-key-search/:query", getCoursesByKeySearch);
 
 courseRouter.get("/get-courses", getAllCourses);
-courseRouter.get("/get-courses/:categorySlug", getCoursesByCategory);
 
 courseRouter.get(
   "/get-course-content/:id",
@@ -69,22 +69,16 @@ courseRouter.get(
 
 courseRouter.put(
   "/add-question",
-  // updateAccessToken,
-  // isAuthenticated,
+  updateAccessToken,
+  isAuthenticated,
   addQuestion
-);
-
-courseRouter.put(
-  "/add-quiz-question",
-  // updateAccessToken,
-  // isAuthenticated,
-  addQuestionQuiz
 );
 
 courseRouter.put("/add-answer", updateAccessToken, isAuthenticated, addAnswer);
 
-courseRouter.put("/add-answer-quiz", /*updateAccessToken, isAuthenticated,*/ addAnswerQuiz);
+courseRouter.put("/add-answer-quiz", updateAccessToken, isAuthenticated, addAnswerQuiz);
 
+courseRouter.get('/quiz/:contentId', updateAccessToken, isAuthenticated, getAnswersQuiz);
 courseRouter.put(
   "/add-review/:id",
   updateAccessToken,
@@ -126,5 +120,10 @@ courseRouter.delete(
   authorizeRoles("admin"),
   deleteCourse
 );
+
+courseRouter.get("/get-index", getIndexStock);
+
+courseRouter.post("/get-user-progress", updateAccessToken, isAuthenticated, getCurrentUserProgress);
+// courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
 export default courseRouter;

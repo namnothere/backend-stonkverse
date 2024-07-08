@@ -63,7 +63,7 @@ const userSchema: Schema<IUser> = new Schema(
       type: Boolean,
       default: false,
     },
-    courses: [{ courseId: String, createdDate: Date }],
+    courses: [{ courseId: String, createdDate: Date}],
   },
   { timestamps: true }
 );
