@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import ErrorHandler from "../../utils/ErrorHandler";
 import { LayoutModel } from "../models";
+import axios from "axios";
 
 // Create Layout
 export const createLayout = CatchAsyncErrors(
@@ -141,3 +142,35 @@ export const getLayoutByType = CatchAsyncErrors(
     }
   }
 );
+
+export const getChatbotResponse = CatchAsyncErrors(
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { message } = req.body;
+        console.log("mess input:",message)
+
+        if (!message) {
+          return next(new ErrorHandler("Message is required", 400));
+        }
+  
+        const response = await axios.post('http://207.148.64.246:8080/ask', { newMessage: message }, {
+          headers: {
+            "Content-Type": "application/json",
+            "Connection": "keep-alive"
+          }
+        });
+        console.log("response:",response)
+
+        const botResponse = response.data.response.trim();
+          console.log("botResponse:",botResponse)
+
+        res.status(200).json({
+          success: true,
+          botResponse,
+        });
+      } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+      }
+    }
+  );
+  

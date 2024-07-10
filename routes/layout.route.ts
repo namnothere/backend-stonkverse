@@ -3,6 +3,7 @@ import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import {
   createLayout,
   editLayout,
+  getChatbotResponse,
   getLayoutByType,
 } from "../layout/controllers/layout.controller";
 import { updateAccessToken } from "../user/controllers/user.controller";
@@ -26,5 +27,8 @@ layoutRouter.put(
 );
 
 layoutRouter.get("/get-layout/:type", getLayoutByType);
+
+layoutRouter.post('/chatbot', getChatbotResponse);
+
 
 export default layoutRouter;
