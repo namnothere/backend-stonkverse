@@ -3,7 +3,7 @@ import { CourseModel } from "../models";
 
 import axios from 'axios';
 
-const PREDICT_LABEL_API_URL = 'http://127.0.0.1:8000/predict_label';
+const PREDICT_LABEL_API_URL = 'http://127.0.0.1:8000/predict';
 
 export const checkCourseContent = async (itemName: string) => {
   try {
