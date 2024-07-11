@@ -2,7 +2,7 @@ import cloudinary from "cloudinary";
 import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
 import { NextFunction, Request, Response } from "express";
 import ErrorHandler from "../../utils/ErrorHandler";
-import { checkCourseContent, createCourseInDB, updateCourseInDB } from "../providers";
+import { checkContent, createCourseInDB, updateCourseInDB } from "../providers";
 import { CourseModel, IAnswerQuiz, ICourse, ICourseData, IQuestionQuiz } from "../models";
 import { redis } from "../../utils/redis";
 import mongoose from "mongoose";
@@ -32,7 +32,7 @@ export const uploadCourse = CatchAsyncErrors(
         };
       }
       if (curriculum) {
-        
+
         const myCloudCurri = await cloudinary.v2.uploader.upload(curriculum, {
           resource_type: "auto",
           folder: "curriculums",
@@ -50,11 +50,12 @@ export const uploadCourse = CatchAsyncErrors(
       }
       // console.log('Quiz data:', data.courseData[0].quiz);
 
-      if (!(await checkCourseContent(req.body.name))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Can not create a course with inappropriate content',
-        });
+      const isContentSafe = await checkContent(req.body);
+
+      console.log("isContentSafe:", isContentSafe)
+
+      if (!isContentSafe ) {
+        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
       const course = await createCourseInDB(data, res, next);
@@ -111,11 +112,12 @@ export const editCourse = CatchAsyncErrors(
         }
       }
 
-      if (!(await checkCourseContent(req.body.name))) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot update the course with inappropriate content',
-        });
+      const isContentSafe = await checkContent(req.body);
+
+      console.log("isContentSafe:", isContentSafe)
+
+      if (!isContentSafe ) {
+        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
       const updatedCourse = await updateCourseInDB(courseId, req.body);
@@ -339,6 +341,14 @@ export const addAnswer = CatchAsyncErrors(
         return next(new ErrorHandler("Invalid content id", 400));
       }
 
+      const isContentSafe = await checkContent(answer);
+
+      console.log("isContentSafe:", isContentSafe)
+
+      if (!isContentSafe ) {
+        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
+      }
+
       const newAnswer: any = { user: req.user?._id, answer };
 
       question.questionReplies.push(newAnswer);
@@ -444,46 +454,46 @@ export const addAnswerQuiz = CatchAsyncErrors(
 export const getAnswersQuiz = async (req: Request, res: Response, next: NextFunction) => {
   try {
 
-        const { contentId } = req.params;
-        const userId = req.user?._id;
-    
-        if (!userId) {
-          return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
-        }
-    
-        // console.log("UserId req: ", userId);
-        // console.log("ContentId req: ", contentId);
-    
-        const courses = await CourseModel.find({
-          'courseData._id': contentId,
-          'courseData.quiz.answers.user': userId,
-        }).select('courseData._id courseData.quiz._id courseData.quiz.answers');
-    
-        // console.log("Courses found: ", courses);
-    
-        const answers: Record<string, Record<string, string[]>> = {};
-    
-        courses.forEach(course => {
-          course.courseData.forEach(data => {
-            // console.log("Processing courseData: ", data._id);
-            if (data._id.toString() === contentId) {
-              data.quiz.forEach(quiz => {
-                // console.log("Processing quiz: ", quiz._id);
-                if (quiz.answers && quiz.answers.length > 0) {
-                  const userAnswers = quiz.answers.filter(ans => ans.user?.toString() === userId.toString());
-                  // console.log("Answers for quiz: ", quiz._id, userAnswers);
-                  if (userAnswers.length > 0) {
-                    if (!answers[data._id.toString()]) {
-                      answers[data._id.toString()] = {};
-                    }
-                    answers[data._id.toString()][quiz._id.toString()] = userAnswers[userAnswers.length - 1].answer;
-                  }
+    const { contentId } = req.params;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return next(new ErrorHandler(MESSAGES.USER_NOT_FOUND, 404));
+    }
+
+    // console.log("UserId req: ", userId);
+    // console.log("ContentId req: ", contentId);
+
+    const courses = await CourseModel.find({
+      'courseData._id': contentId,
+      'courseData.quiz.answers.user': userId,
+    }).select('courseData._id courseData.quiz._id courseData.quiz.answers');
+
+    // console.log("Courses found: ", courses);
+
+    const answers: Record<string, Record<string, string[]>> = {};
+
+    courses.forEach(course => {
+      course.courseData.forEach(data => {
+        // console.log("Processing courseData: ", data._id);
+        if (data._id.toString() === contentId) {
+          data.quiz.forEach(quiz => {
+            // console.log("Processing quiz: ", quiz._id);
+            if (quiz.answers && quiz.answers.length > 0) {
+              const userAnswers = quiz.answers.filter(ans => ans.user?.toString() === userId.toString());
+              // console.log("Answers for quiz: ", quiz._id, userAnswers);
+              if (userAnswers.length > 0) {
+                if (!answers[data._id.toString()]) {
+                  answers[data._id.toString()] = {};
                 }
-              });
+                answers[data._id.toString()][quiz._id.toString()] = userAnswers[userAnswers.length - 1].answer;
+              }
             }
           });
-        });
-    console.log("Final answers: ",answers );
+        }
+      });
+    });
+    console.log("Final answers: ", answers);
     res.status(200).json({ success: true, answers });
   } catch (error: any) {
     return next(new ErrorHandler(error.message, 500));
@@ -744,7 +754,7 @@ export const getIndexStock = CatchAsyncErrors(
       const indexUrl = "http://207.148.64.246:8080/historical_data/filter";
       const response = await axios.get(indexUrl);
       const data = response.data.data;
-      
+
       if (data.length === 0) {
         return next(new ErrorHandler("No data available", 400));
       }
@@ -761,7 +771,7 @@ export const getIndexStock = CatchAsyncErrors(
 
       res.status(200).json({ success: true, result });
 
-    }  catch (error: any) {
+    } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
   }

@@ -24,7 +24,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://frontend-stonkverse-v1.vercel.app/"
+      "https://frontend-stockverse-v1.vercel.app"
     ],
     credentials: true,
   })
