@@ -456,9 +456,7 @@ export const deleteUser = CatchAsyncErrors(
         return next(new ErrorHandler("User not found", 404));
       }
 
-      await user.updateOne({ id }, {
-        $set: { isActive: false },
-      });
+      await user.deleteOne({ id });
 
       await redis.del(id);
 
