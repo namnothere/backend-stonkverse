@@ -50,13 +50,13 @@ export const uploadCourse = CatchAsyncErrors(
       }
       // console.log('Quiz data:', data.courseData[0].quiz);
 
-      const isContentSafe = await checkContent(req.body);
+      // const isContentSafe = await checkContent(req.body);
 
-      console.log("isContentSafe:", isContentSafe)
+      // console.log("isContentSafe:", isContentSafe)
 
-      if (!isContentSafe ) {
-        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
-      }
+      // if (!isContentSafe ) {
+      //   return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
+      // }
 
       const course = await createCourseInDB(data, res, next);
       res.status(201).json({ success: true, course });
@@ -112,13 +112,13 @@ export const editCourse = CatchAsyncErrors(
         }
       }
 
-      const isContentSafe = await checkContent(req.body);
+      // const isContentSafe = await checkContent(req.body);
 
-      console.log("isContentSafe:", isContentSafe)
+      // console.log("isContentSafe:", isContentSafe)
 
-      if (!isContentSafe ) {
-        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
-      }
+      // if (!isContentSafe ) {
+      //   return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
+      // }
 
       const updatedCourse = await updateCourseInDB(courseId, req.body);
       if (!updatedCourse) {
