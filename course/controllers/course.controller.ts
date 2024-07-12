@@ -350,32 +350,32 @@ export const addAnswer = CatchAsyncErrors(
       }
 
       const newAnswer: any = { user: req.user?._id, answer };
-
+      console.log("newans:",newAnswer)
       question.questionReplies.push(newAnswer);
 
       await course?.save();
 
-      if (req.user?._id === question.user._id) {
-        await NotificationModel.create({
-          user: req.user?._id,
-          title: "New Question Reply Received",
-          message: `You have a new question reply in ${courseContent.title}`,
-        });
-      } else {
+      // if (req.user?._id === question.user._id) {
+      //   await NotificationModel.create({
+      //     user: req.user?._id,
+      //     title: "New Question Reply Received",
+      //     message: `You have a new question reply in ${courseContent.title}`,
+      //   });
+      // } else {
 
-        const data = { name: question.user.name, title: courseContent.title };
+      //   const data = { name: question.user.name, title: courseContent.title };
 
-        try {
-          await sendMail({
-            email: question.user.email,
-            subject: "Question Reply",
-            template: "question-reply.ejs",
-            data,
-          });
-        } catch (error: any) {
-          return next(new ErrorHandler(error.message, 500));
-        }
-      }
+      //   try {
+      //     await sendMail({
+      //       email: question.user.email,
+      //       subject: "Question Reply",
+      //       template: "question-reply.ejs",
+      //       data,
+      //     });
+      //   } catch (error: any) {
+      //     return next(new ErrorHandler(error.message, 500));
+      //   }
+      // }
 
       res.status(200).json({ success: true, course });
     } catch (error: any) {
@@ -569,7 +569,6 @@ interface IAddReviewData {
   reviewId: string;
 }
 
-
 export const addReplyToReview = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -590,6 +589,14 @@ export const addReplyToReview = CatchAsyncErrors(
 
       if (!review) {
         return next(new ErrorHandler("Review no course", 404));
+      }
+
+      const isContentSafe = await checkContent(answer);
+
+      console.log("isContentSafe:", isContentSafe)
+
+      if (!isContentSafe ) {
+        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
       const replyData: any = {
