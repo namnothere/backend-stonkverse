@@ -758,7 +758,7 @@ export const getCourseByQuery = CatchAsyncErrors(
 export const getIndexStock = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const indexUrl = "http://207.148.64.246:8080/historical_data/filter";
+      const indexUrl = "https://stock.immergreen.cc/historical_data/filter";
       const response = await axios.get(indexUrl);
       const data = response.data.data;
 
