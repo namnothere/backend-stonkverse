@@ -10,18 +10,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     LoggerModule.forRoot(loggerOptions),
-
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
     }),
-
-    // MongooseModule.forRoot(process.env.DB_URI),
     MongooseModule.forRootAsync({
       useFactory: (config: ConfigService) => ({
         uri: config.get<string>('db.uri'),
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
       }),
       inject: [ConfigService],
     }),

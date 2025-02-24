@@ -8,7 +8,7 @@ export class CatController {
   constructor(
     @InjectModel(Cat.name) private readonly catModel: Model<Cat>,
   ) {}
-  @Get()
+  @Get('')
   findAll() {
     return this.catModel.find();
   }

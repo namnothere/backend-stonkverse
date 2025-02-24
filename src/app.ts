@@ -2,15 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import * as express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { ErrorMiddleware } from "./middleware/error";
-import userRouter from "./routes/user.route";
-import courseRouter from "./routes/course.route";
-import orderRouter from "./routes/order.route";
-import notificationRouter from "./routes/notification.route";
-import analyticsRouter from "./routes/analytics.route";
-import layoutRouter from "./routes/layout.route";
+import { ErrorMiddleware } from "./express-app/middleware/error";
+import { notificationRouter, analyticsRouter, courseRouter, orderRouter, userRouter, layoutRouter } from "./express-app/routes";
 import { rateLimit } from "express-rate-limit";
-import { contactRouter } from "./routes/contact.route";
+import { contactRouter } from "./express-app/routes/contact.route";
 
 require("dotenv").config();
 
@@ -47,27 +42,30 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Routers
-app.use(
-  "/api/v1",
-  userRouter,
-  courseRouter,
-  orderRouter,
-  notificationRouter,
-  analyticsRouter,
-  layoutRouter,
-  contactRouter
-);
+app.use(limiter);
+app.use(ErrorMiddleware);
 
-//Testing the successfully deployed route
-app.get("/", (req: Request, res: Response) => {
-  res.status(200).json({ success: true, message: "Welcome to the API" });
-});
+// // Routers
+// app.use(
+//   "/api/v1",
+//   userRouter,
+//   courseRouter,
+//   orderRouter,
+//   notificationRouter,
+//   analyticsRouter,
+//   layoutRouter,
+//   contactRouter
+// );
 
-// Testing API
-app.get("/test", (req: Request, res: Response, next: NextFunction) => {
-  res.status(200).json({ success: true, message: "API is working" });
-});
+// //Testing the successfully deployed route
+// app.get("/", (req: Request, res: Response) => {
+//   res.status(200).json({ success: true, message: "Welcome to the API" });
+// });
+
+// // Testing API
+// app.get("/test", (req: Request, res: Response, next: NextFunction) => {
+//   res.status(200).json({ success: true, message: "API is working" });
+// });
 
 // Unknown route
 // app.all("/api/v1/{*splat}", (req: Request, res: Response, next: NextFunction) => {
@@ -75,7 +73,3 @@ app.get("/test", (req: Request, res: Response, next: NextFunction) => {
 //   err.statusCode = 404;
 //   next(err);
 // });
-
-app.use(limiter);
-
-app.use(ErrorMiddleware);

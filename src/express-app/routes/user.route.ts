@@ -22,7 +22,7 @@ import {
 } from "../user/controllers";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 
-const userRouter = express.Router();
+export const userRouter = express.Router();
 
 userRouter.post("/registration", registrationUser);
 
@@ -87,4 +87,4 @@ userRouter.get("/reset-user-progress", resetUserLearningProgress);
 userRouter.get("/user/progress/:courseId", updateAccessToken, isAuthenticated, getUserLearningProgress)
 userRouter.post("/user/progress/:courseId/:courseDataId", updateAccessToken, isAuthenticated, updateLessonCompletion)
 
-export default userRouter;
+// export default userRouter;

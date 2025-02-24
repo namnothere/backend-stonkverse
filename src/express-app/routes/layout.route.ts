@@ -10,7 +10,7 @@ import {
 } from "../layout/controllers/layout.controller";
 import { updateAccessToken } from "../user/controllers/user.controller";
 
-const layoutRouter = express.Router();
+export const layoutRouter = express.Router();
 
 layoutRouter.post(
   "/create-layout",
@@ -33,4 +33,4 @@ layoutRouter.get("/get-layout/:type", getLayoutByType);
 layoutRouter.post('/chatbot', getChatbotResponse);
 
 
-export default layoutRouter;
+// export default layoutRouter;

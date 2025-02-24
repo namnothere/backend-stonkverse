@@ -5,21 +5,27 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 // import connectDB from './utils/db';
 import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
+import { v1Routes } from "./express-app";
 
 async function bootstrap() {
   const port = process.env.PORT || 3000;
   const host = process.env.HOST || "http://localhost";
 
+  app.use('/api/v1', ...v1Routes);
+  // app.get('/api/v1/hello', (req, res) => {
+  //   res.send('Hello from Express API v1');
+  // });
+
   const adapter = new ExpressAdapter(app);
   const nestApp = await NestFactory.create(AppModule, adapter);
   nestApp.setGlobalPrefix("api/v2");
-  // logExpressRoutes(app);
-
+  
   nestApp.useLogger(nestApp.get(Logger));
   nestApp.useGlobalInterceptors(new LoggerErrorInterceptor());
-
+  
   await nestApp.listen(port, () => {
     // connectDB();
+    logExpressRoutes(app);
     console.log(`🚀 Server is running at ${host}:${port}`);
   });
 }

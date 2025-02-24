@@ -9,7 +9,7 @@ import {
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../user/controllers";
 
-const analyticsRouter = express.Router();
+export const analyticsRouter = express.Router();
 
 analyticsRouter.get(
   "/get-users-analytics",
@@ -35,4 +35,4 @@ analyticsRouter.get(
   getOrderAnalytics
 );
 
-export default analyticsRouter;
+// export default analyticsRouter;

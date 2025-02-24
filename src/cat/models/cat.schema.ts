@@ -14,6 +14,9 @@ export class Cat {
 
   @Prop()
   breed: string;
+
+  @Prop({ default: true })
+  isNew: boolean;
 }
 
 export const CatSchema = SchemaFactory.createForClass(Cat);

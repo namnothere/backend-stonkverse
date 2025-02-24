@@ -8,7 +8,7 @@ import {
 } from "../controllers/notification.controller";
 import { updateAccessToken } from "../user/controllers/user.controller";
 
-const notificationRouter = express.Router();
+export const notificationRouter = express.Router();
 
 notificationRouter.get(
   "/get-all-notifications",
@@ -26,4 +26,4 @@ notificationRouter.put(
   updateNotification
 );
 
-export default notificationRouter;
+// export default notificationRouter;

@@ -27,7 +27,7 @@ import {
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import { updateAccessToken } from "../user/controllers";
 
-const courseRouter = express.Router();
+export const courseRouter = express.Router();
 
 courseRouter.post(
   "/create-course",
@@ -129,4 +129,4 @@ courseRouter.get("/get-index", getIndexStock);
 courseRouter.post("/get-user-progress", updateAccessToken, isAuthenticated, getCurrentUserProgress);
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
-export default courseRouter;
+// export default courseRouter;

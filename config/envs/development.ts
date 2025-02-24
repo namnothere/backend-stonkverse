@@ -20,11 +20,9 @@ export const config = {
   db: {
     uri: process.env.DB_URI || 'mongodb://127.0.0.1:27017/dbname',
     options: {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       user: process.env.DB_USER || 'username',
       pass: process.env.DB_PASSWORD || 'password',
-      authSource: 'admin',
+      // authSource: 'admin',
     },
   },
   foo: 'dev-bar',
