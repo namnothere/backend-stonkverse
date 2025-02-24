@@ -6,6 +6,8 @@ import { CatModule } from './cat/cat.module';
 import { configuration, loggerOptions } from 'config';
 import { LoggerModule } from 'nestjs-pino';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CourseModule } from './course/course.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       inject: [ConfigService],
     }),
     CatModule,
+    CourseModule,
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

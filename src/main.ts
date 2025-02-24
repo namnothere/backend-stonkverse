@@ -3,9 +3,10 @@ import { app } from "./app";
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
-// import connectDB from './utils/db';
+import connectDB from './express-app/utils/db';
 import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 import { v1Routes } from "./express-app";
+import { getConnectionToken } from "@nestjs/mongoose";
 
 async function bootstrap() {
   const port = process.env.PORT || 3000;
@@ -19,12 +20,21 @@ async function bootstrap() {
   const adapter = new ExpressAdapter(app);
   const nestApp = await NestFactory.create(AppModule, adapter);
   nestApp.setGlobalPrefix("api/v2");
-  
+
   nestApp.useLogger(nestApp.get(Logger));
   nestApp.useGlobalInterceptors(new LoggerErrorInterceptor());
-  
+
+  const mongooseConnection = nestApp.get(getConnectionToken());
+
+  if (mongooseConnection.readyState !== 1) {
+    console.error("❌ MongoDB connection is not ready. Express might fail.");
+  } else {
+    console.log("✅ MongoDB connection is ready for Express API v1");
+  }
+
   await nestApp.listen(port, () => {
-    // connectDB();
+
+    connectDB();
     logExpressRoutes(app);
     console.log(`🚀 Server is running at ${host}:${port}`);
   });
@@ -32,7 +42,7 @@ async function bootstrap() {
 
 function logExpressRoutes(app: express.Application) {
   console.log("📌 Registered Express Routes:");
-  
+
   app.router.stack.forEach((middleware) => {
     if (middleware.route) {
       // Extract only explicitly defined routes
@@ -40,7 +50,7 @@ function logExpressRoutes(app: express.Application) {
       const methods = Object.keys(route.methods)
         .map((method) => method.toUpperCase())
         .join(", ");
-      
+
       if (route.path !== "/") {  // Prevent logging unintended root routes
         console.log(`   ${methods} -> ${route.path}`);
       }
@@ -53,7 +63,7 @@ function logExpressRoutes(app: express.Application) {
           const subMethods = Object.keys(subRoute.methods)
             .map((method) => method.toUpperCase())
             .join(", ");
-          
+
           if (subRoute.path !== "/") { // Prevent unintended logging
             console.log(`   ${subMethods} -> ${subRoute.path}`);
           }

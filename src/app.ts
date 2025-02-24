@@ -6,6 +6,7 @@ import { ErrorMiddleware } from "./express-app/middleware/error";
 import { notificationRouter, analyticsRouter, courseRouter, orderRouter, userRouter, layoutRouter } from "./express-app/routes";
 import { rateLimit } from "express-rate-limit";
 import { contactRouter } from "./express-app/routes/contact.route";
+import mongoose from 'mongoose';
 
 require("dotenv").config();
 

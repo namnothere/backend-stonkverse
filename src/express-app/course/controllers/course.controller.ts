@@ -345,12 +345,12 @@ export const addAnswer = CatchAsyncErrors(
 
       console.log("isContentSafe:", isContentSafe)
 
-      if (!isContentSafe ) {
+      if (!isContentSafe) {
         return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
       const newAnswer: any = { user: req.user?._id, answer };
-      console.log("newans:",newAnswer)
+      console.log("newans:", newAnswer)
       question.questionReplies.push(newAnswer);
 
       await course?.save();
@@ -595,7 +595,7 @@ export const addReplyToReview = CatchAsyncErrors(
 
       console.log("isContentSafe:", isContentSafe)
 
-      if (!isContentSafe ) {
+      if (!isContentSafe) {
         return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
