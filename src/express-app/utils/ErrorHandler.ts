@@ -1,5 +1,5 @@
 class ErrorHandler extends Error {
-  statusCode: Number;
+  statusCode: number;
 
   constructor(message: any, statusCode: number) {
     super(message);

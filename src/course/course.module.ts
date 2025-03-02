@@ -6,7 +6,9 @@ import mongoose from 'mongoose';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: 'Course', schema: new mongoose.Schema({}, { strict: false }) }]),
+    MongooseModule.forFeature([
+      { name: 'Course', schema: new mongoose.Schema({}, { strict: false }) },
+    ]),
   ],
   controllers: [CourseController],
   providers: [CourseService],
