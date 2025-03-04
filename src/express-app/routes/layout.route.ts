@@ -1,36 +1,35 @@
 // import express from "express";
-const express = require("express");
+const express = require('express');
 
-import { authorizeRoles, isAuthenticated } from "../middleware/auth";
+import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import {
   createLayout,
   editLayout,
   getChatbotResponse,
   getLayoutByType,
-} from "../layout/controllers/layout.controller";
-import { updateAccessToken } from "../user/controllers/user.controller";
+} from '../layout/controllers/layout.controller';
+import { updateAccessToken } from '../user/controllers/user.controller';
 
 export const layoutRouter = express.Router();
 
 layoutRouter.post(
-  "/create-layout",
+  '/create-layout',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin"),
-  createLayout
+  authorizeRoles('admin'),
+  createLayout,
 );
 
 layoutRouter.put(
-  "/edit-layout",
+  '/edit-layout',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin"),
-  editLayout
+  authorizeRoles('admin'),
+  editLayout,
 );
 
-layoutRouter.get("/get-layout/:type", getLayoutByType);
+layoutRouter.get('/get-layout/:type', getLayoutByType);
 
 layoutRouter.post('/chatbot', getChatbotResponse);
-
 
 // export default layoutRouter;

@@ -15,7 +15,7 @@ export const v1Routes = [
   analyticsRouter,
   layoutRouter,
   contactRouter,
-  testRouter
+  testRouter,
 ];
 
 // router.use('/users', userRouter);

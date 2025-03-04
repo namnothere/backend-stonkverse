@@ -1,5 +1,7 @@
 // import type { Payload } from '../src/auth';
 
+import { IUser } from "src/express-app/user";
+
 export declare global {
   type AnyObject = Record<string, unknown>;
 
@@ -25,6 +27,13 @@ export declare global {
     interface Request {
       // customProps of pino-http
       customProps: object;
+    }
+
+    interface User extends IUser {
+      // courses: any[];
+      // _id: string;
+      // name: string;
+      // role: string;
     }
     // eslint-disable-next-line @typescript-eslint/no-empty-interface
     // interface User extends Payload {}
