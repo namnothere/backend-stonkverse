@@ -32,6 +32,11 @@ export class PromoCodeAdminController {
     return this.promoService.getPromo(id);
   }
 
+  @Get()
+  getPromos() {
+    return this.promoService.getPromos();
+  }
+
   @Patch(':id')
   updatePromo(@Param('id') id: string, @Body() input: UpdatePromoCodeInput) {
     return this.promoService.updatePromo(id, input);

@@ -15,16 +15,17 @@ export class PromotionCodeService {
   constructor(
     @InjectModel(PromoCode.name)
     private readonly promoCodeRepo: Model<PromoCode>,
-  ) {}
+  ) { }
 
   async verifyPromotionCode(
-    courseId: string,
+    course: string,
     code: string,
   ): Promise<BaseApiResponse<VerifyPromoOutput>> {
     const promo = await this.promoCodeRepo.findOne({
-      where: { course: { id: courseId }, code },
-      relations: ['course'],
-    });
+      course,
+      code
+    },
+    );
 
     if (!promo) throw new NotFoundException(MESSAGES.PROMOTION_CODE_INVALID);
     if (promo.usageCount >= promo.usageLimit)

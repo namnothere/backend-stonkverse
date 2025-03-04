@@ -8,6 +8,6 @@ export class PromoCodeController {
 
   @Post('/verify')
   verifyPromotionCode(@Body() input: VerifyPromoInput) {
-    return this.promoService.verifyPromotionCode(input.courseId, input.code);
+    return this.promoService.verifyPromotionCode(input.course, input.code);
   }
 }
