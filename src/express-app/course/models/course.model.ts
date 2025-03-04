@@ -1,5 +1,5 @@
-import mongoose, { Document, Model, ObjectId, Schema, Types } from "mongoose";
-import { IUser } from "../../user/models";
+import mongoose, { Document, Model, ObjectId, Schema, Types } from 'mongoose';
+import { IUser } from '../../user/models';
 
 export interface IReply extends Document {
   _id: Types.ObjectId;
@@ -63,7 +63,7 @@ export interface ICourseData extends Document {
   links: ILink[];
   suggestion: string;
   questions: IQuestion[];
-  quiz:IQuestionQuiz[];
+  quiz: IQuestionQuiz[];
 }
 
 export interface IAnswerQuiz extends Document {
@@ -79,33 +79,32 @@ export interface IQuestionQuiz extends Document {
   user: IUser;
   title?: string;
   answers: IAnswerQuiz[];
-  correctAnswer: string[],
-  mockAnswer:string[],
-  maxScore:  number,
+  correctAnswer: string[];
+  mockAnswer: string[];
+  maxScore: number;
   createdAt: Date;
 }
 
 const answerQuizSchema = new Schema<IAnswerQuiz>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
     answer: { type: [String], required: true },
     score: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const questionQuizSchema = new Schema<IQuestionQuiz>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
     title: String,
     answers: [answerQuizSchema],
     correctAnswer: { type: [String], required: true },
     mockAnswer: { type: [String], required: true },
-    maxScore: {type: Number, default:10},
+    maxScore: { type: Number, default: 10 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
-
 
 export interface ICourse extends Document {
   _id: ObjectId;
@@ -137,32 +136,32 @@ export interface ICourse extends Document {
 
 const replySchema = new Schema<IReply>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
     answer: String,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const reviewSchema = new Schema<IReview>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
     rating: { type: Number, default: 0 },
     comment: String,
     commentReplies: [replySchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const linkSchema = new Schema<ILink>({ title: String, url: String });
 
 const commentSchema = new Schema<IQuestion>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User" },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
     title: String,
     question: String,
     questionReplies: [replySchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const courseDataSchema = new Schema<ICourseData>({
@@ -213,7 +212,10 @@ const courseSchema = new Schema<ICourse>(
     ratings: { type: Number, default: 0 },
     purchased: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export const CourseModel: Model<ICourse> = mongoose.model("Course", courseSchema);
+export const CourseModel: Model<ICourse> = mongoose.model(
+  'Course',
+  courseSchema,
+);

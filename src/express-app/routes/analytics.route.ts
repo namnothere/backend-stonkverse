@@ -1,38 +1,38 @@
 // import express from "express";
-const express = require("express");
+const express = require('express');
 
 import {
   getCourseAnalytics,
   getOrderAnalytics,
   getUserAnalytics,
-} from "../controllers/analytics.controller";
-import { authorizeRoles, isAuthenticated } from "../middleware/auth";
-import { updateAccessToken } from "../user/controllers";
+} from '../controllers/analytics.controller';
+import { authorizeRoles, isAuthenticated } from '../middleware/auth';
+import { updateAccessToken } from '../user/controllers';
 
 export const analyticsRouter = express.Router();
 
 analyticsRouter.get(
-  "/get-users-analytics",
+  '/get-users-analytics',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin"),
-  getUserAnalytics
+  authorizeRoles('admin'),
+  getUserAnalytics,
 );
 
 analyticsRouter.get(
-  "/get-courses-analytics",
+  '/get-courses-analytics',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin"),
-  getCourseAnalytics
+  authorizeRoles('admin'),
+  getCourseAnalytics,
 );
 
 analyticsRouter.get(
-  "/get-orders-analytics",
+  '/get-orders-analytics',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin"),
-  getOrderAnalytics
+  authorizeRoles('admin'),
+  getOrderAnalytics,
 );
 
 // export default analyticsRouter;

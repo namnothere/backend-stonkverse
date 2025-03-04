@@ -5,17 +5,17 @@ export interface IRegistrationBody {
   avatar?: string;
 }
 
-export  interface IActivationToken {
+export interface IActivationToken {
   token: string;
   activationCode: string;
 }
 
-export  interface IActivationRequest {
+export interface IActivationRequest {
   activation_token: string;
   activation_code: string;
 }
 
-export  interface ILoginRequest {
+export interface ILoginRequest {
   email: string;
   password: string;
 }
