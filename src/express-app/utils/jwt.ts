@@ -1,8 +1,8 @@
-require('dotenv').config();
+require("dotenv").config();
 
-import { Response } from 'express';
-import { IUser } from '../user/models';
-import { redis } from './redis';
+import { Response } from "express";
+import { IUser } from "../user/models";
+import { redis } from "./redis";
 
 interface ITokenOptions {
   expires: Date;
@@ -36,8 +36,8 @@ export const sendToken = (user: IUser, statusCode: number, res: Response) => {
   const accessToken = user.SignAccessToken();
   const refreshToken = user.SignRefreshToken();
 
-  res.cookie('access_token', accessToken, accessTokenOptions as any);
-  res.cookie('refresh_token', refreshToken, refreshTokenOptions as any);
+  res.cookie("access_token", accessToken, accessTokenOptions as any);
+  res.cookie("refresh_token", refreshToken, refreshTokenOptions as any);
 
   redis.set(user._id, JSON.stringify(user) as any);
 

@@ -1,29 +1,29 @@
 // import express from "express";
-const express = require('express');
+const express = require("express");
 
-import { authorizeRoles, isAuthenticated } from '../middleware/auth';
+import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 import {
   createOrder,
   getAllOrders,
   newPayment,
   sendStripePublishableKey,
-} from '../order/controllers';
-import { updateAccessToken } from '../user/controllers';
+} from "../order/controllers";
+import { updateAccessToken } from "../user/controllers";
 
 export const orderRouter = express.Router();
 
-orderRouter.post('/create-order', isAuthenticated, createOrder);
+orderRouter.post("/create-order", isAuthenticated, createOrder);
 
 orderRouter.get(
-  '/get-orders',
+  "/get-orders",
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
-  getAllOrders,
+  authorizeRoles("admin"),
+  getAllOrders
 );
 
-orderRouter.get('/payment/stripe-publishable-key', sendStripePublishableKey);
+orderRouter.get("/payment/stripe-publishable-key", sendStripePublishableKey);
 
-orderRouter.post('/payment', isAuthenticated, newPayment);
+orderRouter.post("/payment", isAuthenticated, newPayment);
 
 // export default orderRouter;

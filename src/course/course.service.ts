@@ -7,7 +7,7 @@ import { Model } from 'mongoose';
 @Injectable()
 export class CourseService {
   constructor(
-    @InjectModel('Course') private readonly courseModel: Model<any>,
+    @InjectModel('Course') private readonly courseModel: Model<any>
   ) {}
   create(createCourseDto: CreateCourseDto) {
     return 'This action adds a new course';
@@ -15,13 +15,9 @@ export class CourseService {
 
   findAll() {
     // return `This action returns all course`;
-    return this.courseModel
-      .find()
-      .select(
-        '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
-      )
-      .lean()
-      .exec();
+    return this.courseModel.find()
+    .select("-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links")
+    .lean().exec();
   }
 
   findOne(id: number) {

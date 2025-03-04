@@ -1,24 +1,18 @@
-import cloudinary from 'cloudinary';
-import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';
-import { NextFunction, Request, Response } from 'express';
-import ErrorHandler from '../../utils/ErrorHandler';
-import { checkContent, createCourseInDB, updateCourseInDB } from '../providers';
-import {
-  CourseModel,
-  IAnswerQuiz,
-  ICourse,
-  ICourseData,
-  IQuestionQuiz,
-} from '../models';
-import { redis } from '../../utils/redis';
-import mongoose from 'mongoose';
-import { sendMail } from '../../utils/sendMail';
-import { NotificationModel } from '../../models';
-import axios from 'axios';
-import { LayoutModel } from '../../layout/models';
-import { getUserInfo } from '../../user/controllers';
-import { userModel } from '../../user/models';
-import { MESSAGES } from '../../shared/common';
+import cloudinary from "cloudinary";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
+import { NextFunction, Request, Response } from "express";
+import ErrorHandler from "../../utils/ErrorHandler";
+import { checkContent, createCourseInDB, updateCourseInDB } from "../providers";
+import { CourseModel, IAnswerQuiz, ICourse, ICourseData, IQuestionQuiz } from "../models";
+import { redis } from "../../utils/redis";
+import mongoose from "mongoose";
+import { sendMail } from "../../utils/sendMail";
+import { NotificationModel } from "../../models";
+import axios from "axios";
+import { LayoutModel } from "../../layout/models";
+import { getUserInfo } from "../../user/controllers";
+import { userModel } from "../../user/models";
+import { MESSAGES } from "../../shared/common";
 
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -29,7 +23,7 @@ export const uploadCourse = CatchAsyncErrors(
 
       if (thumbnail) {
         const myCloud = await cloudinary.v2.uploader.upload(thumbnail, {
-          folder: 'courses',
+          folder: "courses",
         });
 
         data.thumbnail = {
@@ -38,9 +32,10 @@ export const uploadCourse = CatchAsyncErrors(
         };
       }
       if (curriculum) {
+
         const myCloudCurri = await cloudinary.v2.uploader.upload(curriculum, {
-          resource_type: 'auto',
-          folder: 'curriculums',
+          resource_type: "auto",
+          folder: "curriculums",
           // }).then((result) => {
           //     console.log("Upload successful");
           //     console.log(result);
@@ -65,10 +60,12 @@ export const uploadCourse = CatchAsyncErrors(
 
       const course = await createCourseInDB(data, res, next);
       res.status(201).json({ success: true, course });
+
+
     } catch (error: any) {
       next(new ErrorHandler(error.message, error.status || 500));
     }
-  },
+  }
 );
 
 export const editCourse = CatchAsyncErrors(
@@ -77,24 +74,21 @@ export const editCourse = CatchAsyncErrors(
       const data = req.body;
       const courseId = req.params.id;
 
-      const existCourse: any = await CourseModel.findById(courseId);
+      let existCourse: any = await CourseModel.findById(courseId);
 
       if (!existCourse) {
-        res.status(404).json({ success: false, message: 'Course not found' });
+        res.status(404).json({ success: false, message: "Course not found" });
         return;
       }
 
       if (data.thumbnail) {
         const thumbnail = data.thumbnail;
-        if (!thumbnail.startsWith('https')) {
-          const thumbnailCloud = await cloudinary.v2.uploader.upload(
-            thumbnail,
-            {
-              folder: 'courses',
-              resource_type: 'auto',
-              allowedFormats: ['jpg', 'png', 'pdf'],
-            },
-          );
+        if (!thumbnail.startsWith("https")) {
+          const thumbnailCloud = await cloudinary.v2.uploader.upload(thumbnail, {
+            folder: "courses",
+            resource_type: "auto",
+            allowedFormats: ["jpg", "png", "pdf"],
+          });
           data.thumbnail = {
             public_id: thumbnailCloud.public_id,
             url: thumbnailCloud.secure_url,
@@ -104,15 +98,13 @@ export const editCourse = CatchAsyncErrors(
 
       if (data.curriculum) {
         const curriculum = data.curriculum;
-        if (!curriculum.startsWith('https')) {
-          const curriculumCloud = await cloudinary.v2.uploader.upload(
-            curriculum,
-            {
-              resource_type: 'auto',
-              folder: 'curriculums',
-              allowedFormats: ['jpg', 'png', 'pdf'],
-            },
-          );
+        if (!curriculum.startsWith("https")) {
+          const curriculumCloud = await cloudinary.v2.uploader.upload(curriculum, {
+            resource_type: "auto",
+            folder: "curriculums",
+            allowedFormats: ["jpg", "png", "pdf"],
+
+          });
           data.curriculum = {
             public_id: curriculumCloud.public_id,
             url: curriculumCloud.secure_url,
@@ -130,16 +122,15 @@ export const editCourse = CatchAsyncErrors(
 
       const updatedCourse = await updateCourseInDB(courseId, req.body);
       if (!updatedCourse) {
-        return res
-          .status(404)
-          .json({ success: false, message: 'Course not found' });
+        return res.status(404).json({ success: false, message: "Course not found" });
       }
       res.status(200).json({ success: true, course: updatedCourse });
     } catch (error: any) {
       next(new ErrorHandler(error.message, error.status || 500));
     }
-  },
+  }
 );
+
 
 export const getSingleCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -148,33 +139,33 @@ export const getSingleCourse = CatchAsyncErrors(
 
       const course = await CourseModel.findById(courseId)
         .select(
-          '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
+          "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
         )
-        .populate('reviews.user');
+        .populate("reviews.user");
 
       if (!course) {
-        res.status(404).json({ success: false, message: 'Course not found' });
+        res.status(404).json({ success: false, message: "Course not found" });
       }
 
       res.status(200).json({ success: true, course });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 export const getAllCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const courses = await CourseModel.find().select(
-        '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
+        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
       );
 
       res.status(200).json({ success: true, courses });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 export const getCoursesByKeySearch = CatchAsyncErrors(
@@ -183,19 +174,19 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
       const { query } = req.params;
 
       const courses = await CourseModel.find({
-        name: { $regex: query, $options: 'i' },
-      }).select('thumbnail name ratings');
+        name: { $regex: query, $options: "i" },
+      }).select("thumbnail name ratings");
 
       console.log(courses[0]);
 
       const notDuplicate = new Map();
 
-      courses.forEach((course) => {
+      courses.forEach(course => {
         if (course.name) {
           notDuplicate.set(course.name, {
             name: course.name,
             thumbnail: course.thumbnail.url,
-            ratings: course.ratings,
+            ratings: course.ratings
           });
         }
       });
@@ -203,7 +194,7 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
       const courseSearch = Array.from(notDuplicate.values());
       console.log(courseSearch);
       // const courseSearch = courses.map((course) => {
-      //   console.log(course.courseData);
+      //   console.log(course.courseData); 
       //   return course.name;
       // }).flat();
       // console.log(courseSearch[0])
@@ -211,7 +202,7 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 export const getCourseByUser = CatchAsyncErrors(
@@ -220,17 +211,17 @@ export const getCourseByUser = CatchAsyncErrors(
       const userCourseList = req.user?.courses;
       const courseId = req.params.id;
       const courseExists = userCourseList?.find(
-        (course: any) => course.courseId === courseId,
+        (course: any) => course.courseId === courseId
       );
 
       if (!courseExists) {
         return next(
-          new ErrorHandler('You are not eligible to access this course', 403),
+          new ErrorHandler("You are not eligible to access this course", 403)
         );
       }
 
       const course = await CourseModel.findById(courseId).populate(
-        'courseData.questions.user courseData.questions.questionReplies.user',
+        "courseData.questions.user courseData.questions.questionReplies.user"
       );
 
       const content = course?.courseData;
@@ -239,8 +230,9 @@ export const getCourseByUser = CatchAsyncErrors(
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
     }
-  },
+  }
 );
+
 
 export const getCourseByAdmin = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -252,8 +244,9 @@ export const getCourseByAdmin = CatchAsyncErrors(
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
     }
-  },
+  }
 );
+
 
 interface IAddQuestionData {
   title: string;
@@ -271,19 +264,19 @@ export const addQuestion = CatchAsyncErrors(
       // console.log("test: ",course)
 
       if (!course) {
-        return next(new ErrorHandler('Course not found', 404));
+        return next(new ErrorHandler("Course not found", 404));
       }
 
       if (!mongoose.Types.ObjectId.isValid(contentId)) {
-        return next(new ErrorHandler('Invalid content id', 400));
+        return next(new ErrorHandler("Invalid content id", 400));
       }
 
       const courseContent = course?.courseData?.find((item: any) =>
-        item._id.equals(contentId),
+        item._id.equals(contentId)
       );
 
       if (!courseContent) {
-        return next(new ErrorHandler('Invalid content id', 400));
+        return next(new ErrorHandler("Invalid content id", 400));
       }
 
       const newQuestion: any = {
@@ -298,7 +291,7 @@ export const addQuestion = CatchAsyncErrors(
       // [LATER]
       const notification = await NotificationModel.create({
         user: req.user?._id,
-        title: 'New Question Created',
+        title: "New Question Created",
         message: `You have a new question in ${courseContent.title}`,
       });
 
@@ -308,7 +301,7 @@ export const addQuestion = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 interface IAddAnswerData {
@@ -325,44 +318,39 @@ export const addAnswer = CatchAsyncErrors(
         req.body as IAddAnswerData;
 
       const course = await CourseModel.findById(courseId).populate(
-        'courseData.questions.user',
+        "courseData.questions.user"
       );
 
       if (!mongoose.Types.ObjectId.isValid(contentId)) {
-        return next(new ErrorHandler('Invalid content id', 400));
+        return next(new ErrorHandler("Invalid content id", 400));
       }
 
       const courseContent = course?.courseData?.find((item: any) =>
-        item._id.equals(contentId),
+        item._id.equals(contentId)
       );
 
       if (!courseContent) {
-        return next(new ErrorHandler('Invalid content id', 400));
+        return next(new ErrorHandler("Invalid content id", 400));
       }
 
       const question = courseContent.questions.find((item: any) =>
-        item._id.equals(questionId),
+        item._id.equals(questionId)
       );
 
       if (!question) {
-        return next(new ErrorHandler('Invalid content id', 400));
+        return next(new ErrorHandler("Invalid content id", 400));
       }
 
       const isContentSafe = await checkContent(answer);
 
-      console.log('isContentSafe:', isContentSafe);
+      console.log("isContentSafe:", isContentSafe)
 
       if (!isContentSafe) {
-        return next(
-          new ErrorHandler(
-            'Cannot create answer with inappropriate content',
-            400,
-          ),
-        );
+        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
       const newAnswer: any = { user: req.user?._id, answer };
-      console.log('newans:', newAnswer);
+      console.log("newans:", newAnswer)
       question.questionReplies.push(newAnswer);
 
       await course?.save();
@@ -393,17 +381,18 @@ export const addAnswer = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 interface IAddAnswerQuizz {
   courseId: string;
   contentId: string;
   answers: {
+
     questionId: string;
     answer: string[];
   }[];
-  score: number;
+  score: number,
 }
 
 export const addAnswerQuiz = CatchAsyncErrors(
@@ -412,36 +401,32 @@ export const addAnswerQuiz = CatchAsyncErrors(
       const { courseId, contentId, answers } = req.body as IAddAnswerQuizz;
 
       const course = await CourseModel.findById(courseId).populate(
-        'courseData.quiz.user',
+        "courseData.quiz.user"
       );
       if (!mongoose.Types.ObjectId.isValid(contentId)) {
-        return next(new ErrorHandler('Course not found', 400));
+        return next(new ErrorHandler("Course not found", 400));
       }
 
       const courseContent = course?.courseData?.find((item: any) =>
-        item._id.equals(contentId),
+        item._id.equals(contentId)
       );
       if (!courseContent) {
-        return next(new ErrorHandler('Video not found', 400));
+        return next(new ErrorHandler("Video not found", 400));
       }
 
       let totalScore = 0;
-      const detailedScores: { [key: string]: number } = {};
+      let detailedScores: { [key: string]: number } = {};
 
-      answers.forEach((answerObj) => {
+      answers.forEach(answerObj => {
         const { questionId, answer } = answerObj;
-        const question = courseContent.quiz.find((item) =>
-          item._id.equals(questionId),
-        );
+        const question = courseContent.quiz.find((item) => item._id.equals(questionId));
         if (!question) {
           return;
         }
 
         let score = 0;
         if (Array.isArray(question.correctAnswer)) {
-          score = question.correctAnswer.every((val) => answer.includes(val))
-            ? question.maxScore
-            : 0;
+          score = question.correctAnswer.every((val) => answer.includes(val)) ? question.maxScore : 0;
         } else {
           score = question.correctAnswer === answer[0] ? question.maxScore : 0;
         }
@@ -451,7 +436,7 @@ export const addAnswerQuiz = CatchAsyncErrors(
         const newAnswer: any = {
           user: req.user?._id,
           answer,
-          score,
+          score
         };
 
         question.answers.push(newAnswer);
@@ -463,15 +448,12 @@ export const addAnswerQuiz = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
-export const getAnswersQuiz = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getAnswersQuiz = async (req: Request, res: Response, next: NextFunction) => {
   try {
+
     const { contentId } = req.params;
     const userId = req.user?._id;
 
@@ -491,35 +473,33 @@ export const getAnswersQuiz = async (
 
     const answers: Record<string, Record<string, string[]>> = {};
 
-    courses.forEach((course) => {
-      course.courseData.forEach((data) => {
+    courses.forEach(course => {
+      course.courseData.forEach(data => {
         // console.log("Processing courseData: ", data._id);
         if (data._id.toString() === contentId) {
-          data.quiz.forEach((quiz) => {
+          data.quiz.forEach(quiz => {
             // console.log("Processing quiz: ", quiz._id);
             if (quiz.answers && quiz.answers.length > 0) {
-              const userAnswers = quiz.answers.filter(
-                (ans) => ans.user?.toString() === userId.toString(),
-              );
+              const userAnswers = quiz.answers.filter(ans => ans.user?.toString() === userId.toString());
               // console.log("Answers for quiz: ", quiz._id, userAnswers);
               if (userAnswers.length > 0) {
                 if (!answers[data._id.toString()]) {
                   answers[data._id.toString()] = {};
                 }
-                answers[data._id.toString()][quiz._id.toString()] =
-                  userAnswers[userAnswers.length - 1].answer;
+                answers[data._id.toString()][quiz._id.toString()] = userAnswers[userAnswers.length - 1].answer;
               }
             }
           });
         }
       });
     });
-    console.log('Final answers: ', answers);
+    console.log("Final answers: ", answers);
     res.status(200).json({ success: true, answers });
   } catch (error: any) {
     return next(new ErrorHandler(error.message, 500));
   }
 };
+
 
 export const addReview = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -529,12 +509,12 @@ export const addReview = CatchAsyncErrors(
       const courseId = req.params.id;
 
       const courseExists = userCourseList?.find(
-        (course: any) => course.courseId === courseId.toString(),
+        (course: any) => course.courseId === courseId.toString()
       );
 
       if (!courseExists) {
         return next(
-          new ErrorHandler('You are not eligible to access this course', 400),
+          new ErrorHandler("You are not eligible to access this course", 400)
         );
       }
 
@@ -560,11 +540,12 @@ export const addReview = CatchAsyncErrors(
 
         await course.save();
 
-        const updatedCourse =
-          await CourseModel.findById(courseId).populate('reviews.user');
+        const updatedCourse = await CourseModel.findById(courseId).populate(
+          "reviews.user"
+        );
 
         const notification = {
-          title: 'New Review Created',
+          title: "New Review Created",
           message: `${req.user?.name} has given a review in ${course?.name}`,
         };
 
@@ -574,12 +555,12 @@ export const addReview = CatchAsyncErrors(
           ratings: updatedCourse?.ratings,
         });
       } else {
-        return next(new ErrorHandler('Found no course', 404));
+        return next(new ErrorHandler("Found no course", 404));
       }
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 interface IAddReviewData {
@@ -593,34 +574,29 @@ export const addReplyToReview = CatchAsyncErrors(
     try {
       const { answer, courseId, reviewId } = req.body as IAddReviewData;
       const course = await CourseModel.findById(courseId);
-      console.log('courseId:', courseId);
-      console.log('reviewId:', reviewId);
-      console.log('answer:', answer);
+      console.log("courseId:", courseId);
+      console.log("reviewId:", reviewId);
+      console.log("answer:", answer);
 
       if (!course) {
-        console.log('Loi:');
-        return next(new ErrorHandler('Found no course', 404));
+        console.log("Loi:")
+        return next(new ErrorHandler("Found no course", 404));
       }
 
       const review = course.reviews.find(
-        (review: any) => review._id.toString() === reviewId,
+        (review: any) => review._id.toString() === reviewId
       );
 
       if (!review) {
-        return next(new ErrorHandler('Review no course', 404));
+        return next(new ErrorHandler("Review no course", 404));
       }
 
       const isContentSafe = await checkContent(answer);
 
-      console.log('isContentSafe:', isContentSafe);
+      console.log("isContentSafe:", isContentSafe)
 
       if (!isContentSafe) {
-        return next(
-          new ErrorHandler(
-            'Cannot create answer with inappropriate content',
-            400,
-          ),
-        );
+        return next(new ErrorHandler("Cannot create answer with inappropriate content", 400));
       }
 
       const replyData: any = {
@@ -633,15 +609,16 @@ export const addReplyToReview = CatchAsyncErrors(
       await course?.save();
 
       const updatedCourse = await CourseModel.findById(courseId).populate(
-        'reviews.user reviews.commentReplies.user',
+        "reviews.user reviews.commentReplies.user"
       );
 
       res.status(200).json({ success: true, reviews: updatedCourse?.reviews });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
+
 
 export const getAllCoursesAdmin = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -652,8 +629,9 @@ export const getAllCoursesAdmin = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
+
 
 export const getUserCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -663,14 +641,15 @@ export const getUserCourses = CatchAsyncErrors(
         .sort({
           createdAt: -1,
         })
-        .select('_id name purchased price estimatedPrice courseData thumbnail');
+        .select("_id name purchased price estimatedPrice courseData thumbnail");
 
       res.status(200).json({ success: true, courses });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
+
 
 export const deleteCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -680,7 +659,7 @@ export const deleteCourse = CatchAsyncErrors(
       const course = await CourseModel.findById(id);
 
       if (!course) {
-        return next(new ErrorHandler('Course not found', 400));
+        return next(new ErrorHandler("Course not found", 400));
       }
 
       await CourseModel.deleteOne({ _id: id });
@@ -705,12 +684,13 @@ export const deleteCourse = CatchAsyncErrors(
 
       res
         .status(200)
-        .json({ success: true, message: 'Course deleted successfully' });
+        .json({ success: true, message: "Course deleted successfully" });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
+
 
 export const generateVideoUrl = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -722,18 +702,18 @@ export const generateVideoUrl = CatchAsyncErrors(
         { ttl: 300 },
         {
           headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+            Accept: "application/json",
+            "Content-Type": "application/json",
             Authorization: `Apisecret ${process.env.VDOCIPHER_API_SECRET}`,
           },
-        },
+        }
       );
 
       res.json(response.data);
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
 
 export const getCourseReviews = CatchAsyncErrors(
@@ -742,19 +722,20 @@ export const getCourseReviews = CatchAsyncErrors(
       const { courseId } = req.params;
 
       const course = await CourseModel.findById(courseId)
-        .select('reviews ratings')
-        .populate('reviews.user reviews.commentReplies.user');
+        .select("reviews ratings")
+        .populate("reviews.user reviews.commentReplies.user");
 
       if (!course) {
-        return next(new ErrorHandler('Course not found', 400));
+        return next(new ErrorHandler("Course not found", 400));
       }
 
       res.status(200).json({ success: true, course });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
+
 
 export const getCourseByQuery = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -762,47 +743,45 @@ export const getCourseByQuery = CatchAsyncErrors(
       const { query } = req.params;
 
       const courses = await CourseModel.find({
-        name: { $regex: query, $options: 'i' },
+        name: { $regex: query, $options: "i" },
       }).select(
-        '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
+        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
       );
 
       res.status(200).json({ success: true, courses });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
 
 export const getIndexStock = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const indexUrl = 'https://stock.immergreen.cc/historical_data/filter';
+      const indexUrl = "https://stock.immergreen.cc/historical_data/filter";
       const response = await axios.get(indexUrl);
       const data = response.data.data;
 
       if (data.length === 0) {
-        return next(new ErrorHandler('No data available', 400));
+        return next(new ErrorHandler("No data available", 400));
       }
       const randomIndex = Math.floor(Math.random() * data.length);
       const randomData = data[randomIndex];
 
-      const changePercent =
-        ((randomData.close_price - randomData.open_price) /
-          randomData.open_price) *
-        100;
+      const changePercent = ((randomData.close_price - randomData.open_price) / randomData.open_price) * 100;
 
       const result = res.json({
         symbol: randomData.symbol,
         close_price: randomData.close_price,
-        change_percent: changePercent.toFixed(2),
+        change_percent: changePercent.toFixed(2)
       });
 
       res.status(200).json({ success: true, result });
+
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
 
 // export const getCurrentUserProgress = CatchAsyncErrors(
@@ -884,8 +863,8 @@ export const getCurrentUserProgress = CatchAsyncErrors(
             totalScore += score;
             totalMaxScore += question.maxScore;
 
-            return { title: question.title || '', score };
-          }),
+            return { title: question.title || "", score };
+          })
         );
 
         const completionRate =
@@ -905,5 +884,5 @@ export const getCurrentUserProgress = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );

@@ -5,11 +5,12 @@ import { Model } from 'mongoose';
 
 @Controller('cat')
 export class CatController {
-  constructor(@InjectModel(Cat.name) private readonly catModel: Model<Cat>) {}
+  constructor(
+    @InjectModel(Cat.name) private readonly catModel: Model<Cat>,
+  ) {}
   @Get('')
   findAll() {
-    const all = this.catModel.find();
-    return all;
+    return this.catModel.find();
   }
 
   @Get('create')

@@ -8,7 +8,6 @@ import { LoggerModule } from 'nestjs-pino';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CourseModule } from './course/course.module';
 import { DatabaseModule } from './database/database.module';
-import { PromoCodeModule } from './promo-code/promo-code.module';
 
 @Module({
   imports: [
@@ -26,7 +25,6 @@ import { PromoCodeModule } from './promo-code/promo-code.module';
     CatModule,
     CourseModule,
     DatabaseModule,
-    PromoCodeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
