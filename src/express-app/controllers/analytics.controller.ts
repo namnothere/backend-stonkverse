@@ -1,10 +1,10 @@
-import { NextFunction, Request, Response } from 'express';
-import { CatchAsyncErrors } from '../middleware/catchAsyncErrors';
-import ErrorHandler from '../utils/ErrorHandler';
-import { generateLast12MonthsData } from '../utils/analytics.generator';
-import { userModel, IUser } from '../user/models';
-import { CourseModel, ICourse } from '../course/models';
-import { OrderModel, IOrder } from '../order/models';
+import { NextFunction, Request, Response } from "express";
+import { CatchAsyncErrors } from "../middleware/catchAsyncErrors";
+import ErrorHandler from "../utils/ErrorHandler";
+import { generateLast12MonthsData } from "../utils/analytics.generator";
+import { userModel, IUser } from "../user/models";
+import { CourseModel, ICourse } from "../course/models";
+import { OrderModel, IOrder } from "../order/models";
 
 // Get users analytics
 export const getUserAnalytics = CatchAsyncErrors(
@@ -16,7 +16,7 @@ export const getUserAnalytics = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
 
 // Get course analytics
@@ -29,7 +29,7 @@ export const getCourseAnalytics = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
 
 // Get order analytics
@@ -42,5 +42,5 @@ export const getOrderAnalytics = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );

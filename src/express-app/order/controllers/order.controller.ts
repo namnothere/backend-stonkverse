@@ -1,19 +1,19 @@
-import { NextFunction, Request, Response } from 'express';
-import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';
-import ErrorHandler from '../../utils/ErrorHandler';
-import { IOrder, OrderModel } from '../models';
-import { userModel } from '../../user/models';
-import { CourseModel } from '../../course/models';
-import { newOrder } from '../providers';
-import { sendMail } from '../../utils/sendMail';
-import { NotificationModel } from '../../models';
-import { redis } from '../../utils/redis';
-import { ObjectId } from 'mongoose';
+import { NextFunction, Request, Response } from "express";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
+import ErrorHandler from "../../utils/ErrorHandler";
+import { IOrder, OrderModel } from "../models";
+import { userModel } from "../../user/models";
+import { CourseModel } from "../../course/models";
+import { newOrder } from "../providers";
+import { sendMail } from "../../utils/sendMail";
+import { NotificationModel } from "../../models";
+import { redis } from "../../utils/redis";
+import { ObjectId } from "mongoose";
 
-require('dotenv').config();
+require("dotenv").config();
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-import Stripe from 'stripe';
+import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 // Create order
@@ -23,13 +23,14 @@ export const createOrder = CatchAsyncErrors(
       const { courseId, payment_info } = req.body as IOrder;
 
       if (payment_info) {
-        if ('id' in payment_info) {
+        if ("id" in payment_info) {
           const paymentIntentId: any = payment_info.id;
-          const paymentIntent =
-            await stripe.paymentIntents.retrieve(paymentIntentId);
+          const paymentIntent = await stripe.paymentIntents.retrieve(
+            paymentIntentId
+          );
 
-          if (paymentIntent.status !== 'succeeded') {
-            next(new ErrorHandler('Payment not authorized', 400));
+          if (paymentIntent.status !== "succeeded") {
+            next(new ErrorHandler("Payment not authorized", 400));
           }
         }
       }
@@ -37,19 +38,19 @@ export const createOrder = CatchAsyncErrors(
       const user = await userModel.findById(req.user?._id);
 
       const courseExistInUser = user?.courses.find(
-        (course: any) => course.courseId === courseId,
+        (course: any) => course.courseId === courseId
       );
 
       if (courseExistInUser) {
         return next(
-          new ErrorHandler('You have already purchased this course', 400),
+          new ErrorHandler("You have already purchased this course", 400)
         );
       }
 
       const course = await CourseModel.findById(courseId);
 
       if (!course) {
-        return next(new ErrorHandler('Course not found', 404));
+        return next(new ErrorHandler("Course not found", 404));
       }
 
       const data: any = {
@@ -60,13 +61,13 @@ export const createOrder = CatchAsyncErrors(
 
       const mailData = {
         order: {
-          _id: course._id.toString().slice(0, 6),
+          _id: (course._id as ObjectId).toString().slice(0, 6),
           name: course.name,
           price: course.price,
-          date: new Date().toLocaleDateString('vi-VN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
+          date: new Date().toLocaleDateString("vi-VN", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
           }),
         },
       };
@@ -75,8 +76,8 @@ export const createOrder = CatchAsyncErrors(
         if (user) {
           await sendMail({
             email: user.email,
-            subject: 'Order Confirmation',
-            template: 'order-confirmation.ejs',
+            subject: "Order Confirmation",
+            template: "order-confirmation.ejs",
             data: mailData,
           });
         }
@@ -94,7 +95,7 @@ export const createOrder = CatchAsyncErrors(
 
       await NotificationModel.create({
         user: user?._id,
-        title: 'New Order',
+        title: "New Order",
         message: `You have a new order from ${course.name}`,
       });
 
@@ -108,19 +109,20 @@ export const createOrder = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 export const getAllOrders = CatchAsyncErrors(
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const orders = await OrderModel.find().sort({ createdAt: -1 });
+      const orders = await OrderModel.find()
+        .sort({ createdAt: -1 });
 
       res.status(200).json({ success: true, orders });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );
 
 export const sendStripePublishableKey = CatchAsyncErrors(
@@ -128,7 +130,7 @@ export const sendStripePublishableKey = CatchAsyncErrors(
     res
       .status(200)
       .json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
-  },
+  }
 );
 
 export const newPayment = CatchAsyncErrors(
@@ -136,9 +138,9 @@ export const newPayment = CatchAsyncErrors(
     try {
       const myPayment = await stripe.paymentIntents.create({
         amount: req.body.amount,
-        currency: 'USD',
+        currency: "USD",
         metadata: {
-          company: 'Stock E-Learning',
+          company: "Stock E-Learning",
         },
         automatic_payment_methods: {
           enabled: true,
@@ -151,5 +153,5 @@ export const newPayment = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
+  }
 );

@@ -1,6 +1,6 @@
-import { NextFunction, Response } from 'express';
-import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';
-import { OrderModel } from '../models';
+import { NextFunction, Response } from "express";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
+import { OrderModel } from "../models";
 
 // Create new order
 export const newOrder = CatchAsyncErrors(
@@ -8,5 +8,5 @@ export const newOrder = CatchAsyncErrors(
     const order = await OrderModel.create(data);
     order.save();
     res.status(201).json({ success: true, order });
-  },
+  }
 );

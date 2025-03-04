@@ -1,9 +1,9 @@
-import cloudinary from 'cloudinary';
-import { NextFunction, Request, Response } from 'express';
-import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';
-import ErrorHandler from '../../utils/ErrorHandler';
-import { LayoutModel } from '../models';
-import axios from 'axios';
+import cloudinary from "cloudinary";
+import { NextFunction, Request, Response } from "express";
+import { CatchAsyncErrors } from "../../middleware/catchAsyncErrors";
+import ErrorHandler from "../../utils/ErrorHandler";
+import { LayoutModel } from "../models";
+import axios from "axios";
 
 // Create Layout
 export const createLayout = CatchAsyncErrors(
@@ -16,11 +16,11 @@ export const createLayout = CatchAsyncErrors(
         return next(new ErrorHandler(`${type} alreay exist`, 400));
       }
 
-      if (type === 'Banner') {
+      if (type === "Banner") {
         const { image, title, subTitle } = req.body;
 
         const myCloud = await cloudinary.v2.uploader.upload(image, {
-          folder: 'layout',
+          folder: "layout",
         });
 
         const banner = {
@@ -29,36 +29,36 @@ export const createLayout = CatchAsyncErrors(
           subTitle,
         };
 
-        await LayoutModel.create({ type: 'Banner', banner });
+        await LayoutModel.create({ type: "Banner", banner });
       }
 
-      if (type === 'FAQ') {
+      if (type === "FAQ") {
         const { faq } = req.body;
         const faqItems = faq.map((item: any) => ({
           question: item.question,
           answer: item.answer,
         }));
-        await LayoutModel.create({ type: 'FAQ', faq: faqItems });
+        await LayoutModel.create({ type: "FAQ", faq: faqItems });
       }
 
-      if (type === 'Categories') {
+      if (type === "Categories") {
         const { categories } = req.body;
         const categoryItems = categories.map((category: any) => ({
           title: category.title,
         }));
         await LayoutModel.create({
-          type: 'Categories',
+          type: "Categories",
           categories: categoryItems,
         });
       }
 
       res
         .status(200)
-        .json({ success: true, message: 'Layout created successfully' });
+        .json({ success: true, message: "Layout created successfully" });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 // Edit Layout
@@ -67,23 +67,23 @@ export const editLayout = CatchAsyncErrors(
     try {
       const { type } = req.body;
 
-      if (type === 'Banner') {
-        const bannerData = await LayoutModel.findOne({ type: 'Banner' });
+      if (type === "Banner") {
+        const bannerData = await LayoutModel.findOne({ type: "Banner" });
         const { image, title, subTitle } = req.body;
 
-        const data: any = image.startsWith('https')
+        const data: any = image.startsWith("https")
           ? bannerData
           : await cloudinary.v2.uploader.upload(image, {
-              folder: 'layout',
+              folder: "layout",
             });
 
         const banner = {
-          type: 'Banner',
+          type: "Banner",
           image: {
-            public_id: image.startsWith('https')
+            public_id: image.startsWith("https")
               ? bannerData?.banner.image.public_id
               : data?.public_id,
-            url: image.startsWith('https')
+            url: image.startsWith("https")
               ? bannerData?.banner.image.url
               : data?.secure_url,
           },
@@ -91,43 +91,43 @@ export const editLayout = CatchAsyncErrors(
           subTitle,
         };
 
-        await LayoutModel.findOneAndUpdate({ type: 'Banner' }, { banner });
+        await LayoutModel.findOneAndUpdate({ type: "Banner" }, { banner });
       }
 
-      if (type === 'FAQ') {
+      if (type === "FAQ") {
         const { faq } = req.body;
-        const existFaq = await LayoutModel.findOne({ type: 'FAQ' });
+        const existFaq = await LayoutModel.findOne({ type: "FAQ" });
         const faqItems = faq.map((item: any) => ({
           question: item.question,
           answer: item.answer,
         }));
         await LayoutModel.findByIdAndUpdate(existFaq?._id, {
-          type: 'FAQ',
+          type: "FAQ",
           faq: faqItems,
         });
       }
 
-      if (type === 'Categories') {
+      if (type === "Categories") {
         const { categories } = req.body;
         const existCategories = await LayoutModel.findOne({
-          type: 'Categories',
+          type: "Categories",
         });
         const categoryItems = categories.map((category: any) => ({
           title: category.title,
         }));
         await LayoutModel.findByIdAndUpdate(existCategories?._id, {
-          type: 'Categories',
+          type: "Categories",
           categories: categoryItems,
         });
       }
 
       res
         .status(200)
-        .json({ success: true, message: 'Layout updated successfully' });
+        .json({ success: true, message: "Layout updated successfully" });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 // Get Layout by Type
@@ -140,40 +140,37 @@ export const getLayoutByType = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  },
+  }
 );
 
 export const getChatbotResponse = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { message } = req.body;
-      console.log('mess input:', message);
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { message } = req.body;
+        console.log("mess input:",message)
 
-      if (!message) {
-        return next(new ErrorHandler('Message is required', 400));
-      }
-
-      const response = await axios.post(
-        'http://207.148.64.246:8080/ask',
-        { newMessage: message },
-        {
+        if (!message) {
+          return next(new ErrorHandler("Message is required", 400));
+        }
+  
+        const response = await axios.post('http://207.148.64.246:8080/ask', { newMessage: message }, {
           headers: {
-            'Content-Type': 'application/json',
-            Connection: 'keep-alive',
-          },
-        },
-      );
-      console.log('response:', response);
+            "Content-Type": "application/json",
+            "Connection": "keep-alive"
+          }
+        });
+        console.log("response:",response)
 
-      const botResponse = response.data.response.trim();
-      console.log('botResponse:', botResponse);
+        const botResponse = response.data.response.trim();
+          console.log("botResponse:",botResponse)
 
-      res.status(200).json({
-        success: true,
-        botResponse,
-      });
-    } catch (error: any) {
-      return next(new ErrorHandler(error.message, 400));
+        res.status(200).json({
+          success: true,
+          botResponse,
+        });
+      } catch (error: any) {
+        return next(new ErrorHandler(error.message, 400));
+      }
     }
-  },
-);
+  );
+  

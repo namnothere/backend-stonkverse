@@ -1,5 +1,5 @@
 // import express from "express";
-const express = require('express');
+const express = require("express");
 
 import {
   activateUser,
@@ -19,82 +19,72 @@ import {
   updateProfilePicture,
   updateUserInfo,
   updateUserRole,
-} from '../user/controllers';
-import { authorizeRoles, isAuthenticated } from '../middleware/auth';
+} from "../user/controllers";
+import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 
 export const userRouter = express.Router();
 
-userRouter.post('/registration', registrationUser);
+userRouter.post("/registration", registrationUser);
 
-userRouter.post('/activate-user', activateUser);
+userRouter.post("/activate-user", activateUser);
 
-userRouter.post('/login', loginUser);
+userRouter.post("/login", loginUser);
 
-userRouter.post('/logout', isAuthenticated, logoutUser);
+userRouter.post("/logout", isAuthenticated, logoutUser);
 
-userRouter.get('/refresh', updateAccessTokenHandler);
+userRouter.get("/refresh", updateAccessTokenHandler);
 
-userRouter.get('/me', updateAccessToken, isAuthenticated, getUserInfo);
+userRouter.get("/me", updateAccessToken, isAuthenticated, getUserInfo);
 
-userRouter.post('/social-auth', socialAuth);
+userRouter.post("/social-auth", socialAuth);
 
 userRouter.put(
-  '/update-user-info',
+  "/update-user-info",
   updateAccessToken,
   isAuthenticated,
-  updateUserInfo,
+  updateUserInfo
 );
 
 userRouter.put(
-  '/update-user-password',
+  "/update-user-password",
   updateAccessToken,
   isAuthenticated,
-  updatePassword,
+  updatePassword
 );
 
 userRouter.put(
-  '/update-user-avatar',
+  "/update-user-avatar",
   updateAccessToken,
   isAuthenticated,
-  updateProfilePicture,
+  updateProfilePicture
 );
 
 userRouter.get(
-  '/get-users',
+  "/get-users",
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
-  getAllUsers,
+  authorizeRoles("admin"),
+  getAllUsers
 );
 
 userRouter.put(
-  '/update-user-role',
+  "/update-user-role",
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
-  updateUserRole,
+  authorizeRoles("admin"),
+  updateUserRole
 );
 
 userRouter.delete(
-  '/delete-user/:id',
+  "/delete-user/:id",
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
-  deleteUser,
+  authorizeRoles("admin"),
+  deleteUser
 );
 
-userRouter.get('/reset-user-progress', resetUserLearningProgress);
-userRouter.get(
-  '/user/progress/:courseId',
-  updateAccessToken,
-  isAuthenticated,
-  getUserLearningProgress,
-);
-userRouter.post(
-  '/user/progress/:courseId/:courseDataId',
-  updateAccessToken,
-  isAuthenticated,
-  updateLessonCompletion,
-);
+userRouter.get("/reset-user-progress", resetUserLearningProgress);
+userRouter.get("/user/progress/:courseId", updateAccessToken, isAuthenticated, getUserLearningProgress)
+userRouter.post("/user/progress/:courseId/:courseDataId", updateAccessToken, isAuthenticated, updateLessonCompletion)
 
 // export default userRouter;

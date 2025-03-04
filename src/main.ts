@@ -1,16 +1,16 @@
-import express from 'express';
-import { app } from './app';
+import express from "express";
+import { app } from "./app";
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import connectDB from './express-app/utils/db';
 import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
-import { v1Routes } from './express-app';
-import { getConnectionToken } from '@nestjs/mongoose';
+import { v1Routes } from "./express-app";
+import { getConnectionToken } from "@nestjs/mongoose";
 
 async function bootstrap() {
   const port = process.env.PORT || 3000;
-  const host = process.env.HOST || 'http://localhost';
+  const host = process.env.HOST || "http://localhost";
 
   app.use('/api/v1', ...v1Routes);
   // app.get('/api/v1/hello', (req, res) => {
@@ -19,7 +19,7 @@ async function bootstrap() {
 
   const adapter = new ExpressAdapter(app);
   const nestApp = await NestFactory.create(AppModule, adapter);
-  nestApp.setGlobalPrefix('api/v2');
+  nestApp.setGlobalPrefix("api/v2");
 
   nestApp.useLogger(nestApp.get(Logger));
   nestApp.useGlobalInterceptors(new LoggerErrorInterceptor());
@@ -27,12 +27,13 @@ async function bootstrap() {
   const mongooseConnection = nestApp.get(getConnectionToken());
 
   if (mongooseConnection.readyState !== 1) {
-    console.error('❌ MongoDB connection is not ready. Express might fail.');
+    console.error("❌ MongoDB connection is not ready. Express might fail.");
   } else {
-    console.log('✅ MongoDB connection is ready for Express API v1');
+    console.log("✅ MongoDB connection is ready for Express API v1");
   }
 
   await nestApp.listen(port, () => {
+
     connectDB();
     logExpressRoutes(app);
     console.log(`🚀 Server is running at ${host}:${port}`);
@@ -40,7 +41,7 @@ async function bootstrap() {
 }
 
 function logExpressRoutes(app: express.Application) {
-  console.log('📌 Registered Express Routes:');
+  console.log("📌 Registered Express Routes:");
 
   app.router.stack.forEach((middleware) => {
     if (middleware.route) {
@@ -48,24 +49,22 @@ function logExpressRoutes(app: express.Application) {
       const route = middleware.route as any;
       const methods = Object.keys(route.methods)
         .map((method) => method.toUpperCase())
-        .join(', ');
+        .join(", ");
 
-      if (route.path !== '/') {
-        // Prevent logging unintended root routes
+      if (route.path !== "/") {  // Prevent logging unintended root routes
         console.log(`   ${methods} -> ${route.path}`);
       }
-    } else if (middleware.name === 'router') {
+    } else if (middleware.name === "router") {
       // Handle nested routers
       const router: any = middleware.handle;
       router.stack.forEach((subMiddleware) => {
         if (subMiddleware.route) {
-          const subRoute = subMiddleware.route;
+          const subRoute = subMiddleware.route as any;
           const subMethods = Object.keys(subRoute.methods)
             .map((method) => method.toUpperCase())
-            .join(', ');
+            .join(", ");
 
-          if (subRoute.path !== '/') {
-            // Prevent unintended logging
+          if (subRoute.path !== "/") { // Prevent unintended logging
             console.log(`   ${subMethods} -> ${subRoute.path}`);
           }
         }
