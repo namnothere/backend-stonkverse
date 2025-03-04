@@ -25,6 +25,7 @@ export interface IUser extends Document {
   isVerified: boolean;
   courses: ICourse[];
   isActive: boolean;
+  token: string;
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
@@ -64,6 +65,9 @@ const userSchema: Schema<IUser> = new Schema(
     isActive: {
       type: Boolean,
       default: false,
+    },
+    token: {
+      type: String,
     },
     courses: [{ courseId: String, createdDate: Date }],
   },

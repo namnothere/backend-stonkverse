@@ -2,7 +2,7 @@ import { IsString } from 'class-validator';
 
 export class VerifyPromoInput {
   @IsString()
-  courseId: string;
+  course: string;
 
   @IsString()
   code: string;

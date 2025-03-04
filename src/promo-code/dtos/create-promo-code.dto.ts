@@ -13,7 +13,7 @@ export class CreatePromoCodeInput {
 
   @IsOptional()
   @IsString()
-  courseId?: string;
+  course?: string;
 
   @IsDateString()
   expDate: string;

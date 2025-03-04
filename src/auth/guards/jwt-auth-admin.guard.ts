@@ -37,11 +37,11 @@ export class JwtAuthAdminGuard extends AuthGuard(STRATEGY_JWT_ADMIN) {
     const authorization = headers.authorization.replace('Bearer ', '');
 
     const user = await this.userRepo.findOne({
-      where: {
         token: authorization,
-        role: USER_ROLE.ADMIN,
-      },
+        // role: USER_ROLE.ADMIN,
     });
+
+    console.log(user);
 
     if (!user) {
       throw new UnauthorizedException();

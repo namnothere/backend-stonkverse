@@ -147,6 +147,10 @@ export const loginUser = CatchAsyncErrors(
         { expiresIn: '5m' },
       );
 
+      // update accessToken to user document
+      user.token = accessToken;
+      await user.save();
+
       const refreshToken = jwt.sign(
         { id: user._id },
         process.env.REFRESH_TOKEN as string,
