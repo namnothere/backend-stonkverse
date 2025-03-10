@@ -132,6 +132,7 @@ export interface ICourse extends Document {
   courseData: ICourseData[];
   ratings?: number;
   purchased?: number;
+  status: COURSE_STATUS;
 }
 
 const replySchema = new Schema<IReply>(
@@ -178,6 +179,12 @@ const courseDataSchema = new Schema<ICourseData>({
   quiz: [questionQuizSchema],
 });
 
+export enum COURSE_STATUS {
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 const courseSchema = new Schema<ICourse>(
   {
     name: { type: String, required: true },
@@ -211,6 +218,8 @@ const courseSchema = new Schema<ICourse>(
     courseData: [courseDataSchema],
     ratings: { type: Number, default: 0 },
     purchased: { type: Number, default: 0 },
+    // isApproved: { type: Boolean, default: false },
+    status: { type: String, enum: COURSE_STATUS, default: COURSE_STATUS.PENDING_REVIEW },
   },
   { timestamps: true },
 );
