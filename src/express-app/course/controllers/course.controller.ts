@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from 'express';
 import ErrorHandler from '../../utils/ErrorHandler';
 import { checkContent, createCourseInDB, updateCourseInDB } from '../providers';
 import {
+  COURSE_STATUS,
   CourseModel,
   IAnswerQuiz,
   ICourse,
@@ -904,6 +905,62 @@ export const getCurrentUserProgress = CatchAsyncErrors(
       res.status(200).json({ success: true, courseScores });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
+    }
+  },
+);
+
+export const getUnapprovedCourses = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { offset, limit } = req.query;
+      const courses = await CourseModel.find({
+        $or: [
+          { status: COURSE_STATUS.PENDING_REVIEW },
+          { status: { $exists: false } },
+        ]
+      })
+        .skip(parseInt((offset ?? 0) as string, 10))
+        .limit(parseInt((limit ?? 0) as string, 10));
+
+      res.status(200).json(courses);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
+    }
+  },
+);
+
+export const approveCourse = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const courseId = req.params.id;
+
+      const course = await CourseModel.findById(courseId);
+
+      // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      if (!course) {
+        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+      }
+
+      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      res.status(200).json(updatedCourse);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
+    }
+  },
+);
+export const rejectCourse = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const courseId = req.params.id;
+      const course = await CourseModel.findById(courseId);
+      if (!course) {
+        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+      }
+
+      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
+      res.status(200).json(updatedCourse);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
     }
   },
 );

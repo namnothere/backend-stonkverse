@@ -23,6 +23,9 @@ import {
   getAnswersQuiz,
   getIndexStock,
   getCurrentUserProgress,
+  getUnapprovedCourses,
+  approveCourse,
+  rejectCourse,
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -138,6 +141,30 @@ courseRouter.post(
   isAuthenticated,
   getCurrentUserProgress,
 );
+
+courseRouter.get(
+  '/admin/courses/pending-review',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  getUnapprovedCourses,
+);
+
+courseRouter.put(
+  '/admin/courses/:id/approve',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  approveCourse,
+);
+courseRouter.put(
+  '/admin/courses/:id/reject',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  rejectCourse,
+);
+
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
 // export default courseRouter;
