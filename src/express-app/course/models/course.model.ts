@@ -64,6 +64,8 @@ export interface ICourseData extends Document {
   suggestion: string;
   questions: IQuestion[];
   quiz: IQuestionQuiz[];
+  percentAccount: number;
+  isFinalTest: boolean;
 }
 
 export interface IAnswerQuiz extends Document {
@@ -177,6 +179,9 @@ const courseDataSchema = new Schema<ICourseData>({
   suggestion: String,
   questions: [commentSchema],
   quiz: [questionQuizSchema],
+
+  percentAccount: { type: Number, default: 0 },
+  isFinalTest: { type: Boolean, default: false },
 });
 
 export enum COURSE_STATUS {
