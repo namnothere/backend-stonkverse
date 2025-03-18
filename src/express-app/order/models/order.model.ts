@@ -4,6 +4,7 @@ export interface IOrder extends Document {
   courseId: string;
   userId: string;
   payment_info: object;
+  promoCode: string;
 }
 
 const orderSchema = new Schema<IOrder>(

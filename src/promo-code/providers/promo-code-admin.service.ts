@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PromoCode } from '../entities';
+import { IPromoCode, PromoCodeModel } from '../entities';
 import { CreatePromoCodeInput, UpdatePromoCodeInput } from '../dtos';
 import { MESSAGES } from '../../shared/constants';
 import { InjectModel } from '@nestjs/mongoose';
@@ -8,8 +8,11 @@ import { Model } from 'mongoose';
 @Injectable()
 export class PromotionCodeAdminService {
   constructor(
-    @InjectModel(PromoCode.name)
-    private readonly promoCodeRepo: Model<PromoCode>,
+    // @InjectModel(PromoCode.name)
+    // private readonly promoCodeRepo: Model<PromoCode>,
+    // @InjectModel(PromoCode.name)
+    // private readonly promoCodeRepo: Model<IPromoCode>,
+    @InjectModel('PromoCode') private readonly promoCodeRepo: Model<IPromoCode>,
   ) { }
 
   // async createPromo(input: CreatePromoCodeInput, adminId: string) {
