@@ -26,6 +26,10 @@ import {
   getUnapprovedCourses,
   approveCourse,
   rejectCourse,
+  uploadFinalTest,
+  approveCourseFinalTest,
+  rejectCourseFinalTest,
+  getPendingFinalTest,
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -164,6 +168,39 @@ courseRouter.put(
   // authorizeRoles('admin'),
   rejectCourse,
 );
+
+courseRouter.post(
+  '/final-test',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  uploadFinalTest,
+);
+
+courseRouter.put(
+  '/admin/final-test/:id/approve',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  approveCourseFinalTest,
+);
+
+courseRouter.put(
+  '/admin/final-test/:id/reject',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  rejectCourseFinalTest,
+);
+
+courseRouter.get(
+  '/admin/final-test/pending-review',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('admin'),
+  getPendingFinalTest,
+);
+
 
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
