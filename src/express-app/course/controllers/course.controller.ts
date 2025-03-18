@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from 'express';
 import ErrorHandler from '../../utils/ErrorHandler';
 import { checkContent, createCourseInDB, updateCourseInDB } from '../providers';
 import {
+  COURSE_DATA_STATUS,
   COURSE_STATUS,
   CourseModel,
   IAnswerQuiz,
@@ -959,6 +960,131 @@ export const rejectCourse = CatchAsyncErrors(
 
       const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
       res.status(200).json(updatedCourse);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
+    }
+  },
+);
+export const approveCourseFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const courseId = req.params.id;
+      const finalTestId = req.params.finalTestId;
+
+      const course = await CourseModel.findById(courseId);
+
+      // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      if (!course) {
+        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+      }
+
+      const finalTest = course.courseData.find((item) => item.isFinalTest);
+      if (!finalTest) {
+        return new ErrorHandler(`Final test not found`, 404);
+      }
+
+      // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, {
+        $set: { "courseData.$[finalTest].status": COURSE_STATUS.APPROVED }
+      }, {
+        arrayFilters: [{ "finalTest._id": finalTestId, "finalTest.isFinalTest": true }],
+        new: true
+      });
+      res.status(200).json(updatedCourse);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
+    }
+  },
+);
+
+export const rejectCourseFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const courseId = req.params.id;
+      const finalTestId = req.params.finalTestId;
+
+      const course = await CourseModel.findById(courseId);
+
+      // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      if (!course) {
+        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+      }
+
+      const finalTest = course.courseData.find((item) => item.isFinalTest);
+      if (!finalTest) {
+        return new ErrorHandler(`Final test not found`, 404);
+      }
+
+      // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
+      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, {
+        $set: { "courseData.$[finalTest].status": COURSE_STATUS.REJECTED }
+      }, {
+        arrayFilters: [{ "finalTest._id": finalTestId, "finalTest.isFinalTest": true }],
+        new: true
+      });
+      res.status(200).json(updatedCourse);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
+    }
+  },
+)
+
+export const uploadFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { data, courseId } = req.body;
+
+      const course = await CourseModel.findById(courseId);
+
+      if (!course) {
+        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+      }
+
+      const isExistingFinalTest = course.courseData.find((item) => item.isFinalTest);
+
+      if (isExistingFinalTest) {
+        return new ErrorHandler(`Final test already exists`, 400);
+      }
+
+      data.isFinalTest = true;
+      const updatedCourse = await CourseModel.findByIdAndUpdate(
+        courseId,
+        {
+          $push: {
+            courseData: {
+              $each: [data],
+              $position: 0,
+            },
+          },
+        },
+        { new: true },
+      );
+
+      res.status(201).json({ success: true, updatedCourse });
+    } catch (error: any) {
+      next(new ErrorHandler(error.message, error.status || 500));
+    }
+  },
+);
+
+
+export const getPendingFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { offset, limit } = req.query;
+      const courses = await CourseModel.find({
+        courseData: {
+          $elemMatch: {
+            isFinalTest: true,
+            status: COURSE_DATA_STATUS.PENDING_REVIEW
+          }
+        }
+      })
+      // .select({
+      //   courseData: { $elemMatch: { isFinalTest: true } }
+      // });
+
+      res.status(200).json(courses);
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
     }

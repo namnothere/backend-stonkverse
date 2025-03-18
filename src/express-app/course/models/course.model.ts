@@ -51,6 +51,12 @@ export interface ILink extends Document {
   url: string;
 }
 
+export enum COURSE_DATA_STATUS {
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 export interface ICourseData extends Document {
   _id: Types.ObjectId;
   title: string;
@@ -66,6 +72,7 @@ export interface ICourseData extends Document {
   quiz: IQuestionQuiz[];
   percentAccount: number;
   isFinalTest: boolean;
+  status: COURSE_DATA_STATUS;
 }
 
 export interface IAnswerQuiz extends Document {
@@ -182,6 +189,12 @@ const courseDataSchema = new Schema<ICourseData>({
 
   percentAccount: { type: Number, default: 0 },
   isFinalTest: { type: Boolean, default: false },
+
+  status: {
+    type: String,
+    enum: COURSE_DATA_STATUS,
+    default: COURSE_DATA_STATUS.PENDING_REVIEW,
+  },
 });
 
 export enum COURSE_STATUS {

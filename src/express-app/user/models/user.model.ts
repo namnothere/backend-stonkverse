@@ -11,6 +11,12 @@ interface ICourse {
   createdDate: Date;
 }
 
+export enum TEST_COURSE_STATUS {
+  NEW = 'NEW',
+  FAILED = 'FAILED',
+  PASSED = 'PASSED',
+}
+
 export interface IUser extends Document {
   _id: string;
   id: string;
@@ -26,6 +32,8 @@ export interface IUser extends Document {
   courses: ICourse[];
   isActive: boolean;
   token: string;
+  finalScore: number;
+
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
@@ -74,11 +82,6 @@ const userSchema: Schema<IUser> = new Schema(
   { timestamps: true },
 );
 
-export enum COURSE_DATA_STATUS {
-  NEW = 0,
-  DONE = 1,
-}
-
 export interface ILearningProgress extends Document {
   user: IUser;
   courseId: string;
@@ -118,8 +121,30 @@ userSchema.methods.comparePassword = async function (
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+export interface IUserScore extends Document {
+  user: IUser;
+  courseId: string;
+  finalScore: number;
+  testCourseStatus: TEST_COURSE_STATUS;
+  createdAt: Date;
+}
+
+export const UserScoreSchema = new Schema<IUserScore>({
+  user: { type: Schema.Types.ObjectId, ref: 'User' },
+  courseId: String,
+  createdAt: Date,
+  finalScore: { type: Number, default: 0 },
+  testCourseStatus: { type: String, default: TEST_COURSE_STATUS.NEW },
+});
+
 export const userModel: Model<IUser> = mongoose.model('User', userSchema);
 export const learningProgressModel: Model<ILearningProgress> = mongoose.model(
   'LearningProgress',
   LearningProgressSchema,
+);
+
+// TODO: insert new document when user finish a course
+export const userScoreModel: Model<IUserScore> = mongoose.model( 
+  'UserScore',
+  UserScoreSchema,
 );
