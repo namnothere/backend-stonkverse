@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PromoCode } from '../entities';
+import { IPromoCode, PromoCodeModel } from '../entities';
 import { VerifyPromoOutput } from '../dtos';
 import { MESSAGES, RESULT_STATUS } from '../../shared/constants';
 import { BaseApiResponse } from '../../shared/dtos';
@@ -13,8 +13,10 @@ import { Model } from 'mongoose';
 @Injectable()
 export class PromotionCodeService {
   constructor(
-    @InjectModel(PromoCode.name)
-    private readonly promoCodeRepo: Model<PromoCode>,
+    // @InjectModel(PromoCode.name)
+    // private readonly promoCodeRepo: Model<PromoCode>,
+    @InjectModel('PromoCode')
+    private readonly promoCodeRepo: Model<IPromoCode>,
   ) { }
 
   async verifyPromotionCode(

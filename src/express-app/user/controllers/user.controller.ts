@@ -2,8 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import {
   userModel,
   IUser,
-  learningProgressModel,
-  COURSE_DATA_STATUS,
+  learningProgressModel
 } from '../models';
 import ErrorHandler from '../../utils/ErrorHandler';
 import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';

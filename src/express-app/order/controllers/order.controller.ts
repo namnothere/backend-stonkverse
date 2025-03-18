@@ -14,13 +14,21 @@ require('dotenv').config();
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 import Stripe from 'stripe';
+import { IPromoCode, PromoCodeModel } from '../../../promo-code/entities';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+
+const calculateDiscount = (promo: IPromoCode, price: number) => {
+  if (promo) {
+    return (price * (100 - promo.percentOff)) / 100;
+  }
+  return price;
+}
 
 // Create order
 export const createOrder = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { courseId, payment_info } = req.body as IOrder;
+      const { courseId, payment_info, promoCode } = req.body as IOrder;
 
       if (payment_info) {
         if ('id' in payment_info) {
@@ -47,16 +55,35 @@ export const createOrder = CatchAsyncErrors(
       }
 
       const course = await CourseModel.findById(courseId);
-
+      
       if (!course) {
         return next(new ErrorHandler('Course not found', 404));
       }
-
+      
       const data: any = {
         courseId: course._id,
         userId: user?._id,
         payment_info,
       };
+
+      if (promoCode) {
+        const promo = await PromoCodeModel.findOne({ code: promoCode });
+
+        if (!promo) {
+          return next(new ErrorHandler('Coupon not found', 404));
+        }
+
+        if (promo.usageCount >= promo.usageLimit) {
+          return next(new ErrorHandler('Coupon is not active', 400));
+        }
+
+        if (promo.expDate && new Date() > promo.expDate) {
+          return next(new ErrorHandler('Coupon has expired', 400));
+        }
+
+        const discountValue = calculateDiscount(promo, course.price);
+        data.payment_info.amount = course.price - discountValue;
+      }
 
       const mailData = {
         order: {
