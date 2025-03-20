@@ -607,3 +607,21 @@ export const updateLessonCompletion = CatchAsyncErrors(
     }
   },
 );
+
+export const getAllEmail = CatchAsyncErrors(
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const email = await userModel.distinct("email");
+ 
+      if (email.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: MESSAGES.EMAIL_NOT_FOUND });
+      }
+
+      res.status(200).json({ success: true, email});
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  },
+);

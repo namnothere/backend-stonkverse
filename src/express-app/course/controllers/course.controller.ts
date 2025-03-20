@@ -86,6 +86,20 @@ export const editCourse = CatchAsyncErrors(
         return;
       }
 
+      const categories = await LayoutModel.findOne({ type: "Categories" });
+
+      const oldCategory = categories?.categories.find(
+        (category) => category.title === existCourse.category
+      );
+
+      if (oldCategory) {
+        const courseIndex = oldCategory?.courses?.findIndex(
+          (course: any) => course.toString() === existCourse._id.toString()
+        );
+
+        oldCategory.courses?.splice(courseIndex, 1);
+      }
+
       if (data.thumbnail) {
         const thumbnail = data.thumbnail;
         if (!thumbnail.startsWith('https')) {
@@ -136,6 +150,21 @@ export const editCourse = CatchAsyncErrors(
           .status(404)
           .json({ success: false, message: 'Course not found' });
       }
+
+      if (data.category && data.category !== existCourse.category) {
+        const newCategory = categories?.categories.find(
+          (category) => category.title === data.category
+        );
+        
+        if (newCategory) {
+          newCategory.courses.push(updatedCourse._id);
+          await categories?.save();
+        }
+      } else if (categories) {
+        // Save categories anyway to persist the removal from old category
+        await categories.save();
+      }
+      
       res.status(200).json({ success: true, course: updatedCourse });
     } catch (error: any) {
       next(new ErrorHandler(error.message, error.status || 500));
@@ -689,21 +718,21 @@ export const deleteCourse = CatchAsyncErrors(
 
       await redis.del(id);
 
-      // const categories = await LayoutModel.findOne({ type: "Categories" });
+      const categories = await LayoutModel.findOne({ type: "Categories" });
 
-      // const oldCategory = categories?.categories.find(
-      //   (category) => category.title === course.category
-      // );
+      const oldCategory = categories?.categories.find(
+        (category) => category.title === course.category
+      );
 
-      // if (oldCategory) {
-      //   const courseIndex = oldCategory?.courses?.findIndex(
-      //     (course: any) => course.toString() === course._id.toString()
-      //   );
+      if (oldCategory) {
+        const courseIndex = oldCategory?.courses?.findIndex(
+          (course: any) => course.toString() === course._id.toString()
+        );
 
-      //   oldCategory.courses?.splice(courseIndex, 1);
-      // }
+        oldCategory.courses?.splice(courseIndex, 1);
+      }
 
-      // await categories?.save();
+      await categories?.save();
 
       res
         .status(200)
@@ -1089,4 +1118,28 @@ export const getPendingFinalTest = CatchAsyncErrors(
       return new ErrorHandler(error.message, 500);
     }
   },
+);
+
+export const getCoursesByCategory = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { categorySlug } = req.params;
+
+      const categoryLowerCase = categorySlug.replace(/-/g, " ");
+
+      const arr = categoryLowerCase.split(" ");
+      for (var i = 0; i < arr.length; i++) {
+        arr[i] = arr[i].charAt(0).toUpperCase() + arr[i].slice(1);
+      }
+      const category = arr.join(" ");
+
+      const courses = await CourseModel.find({ category }).select(
+        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
+      );
+
+      res.status(200).json({ success: true, courses, category });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
 );

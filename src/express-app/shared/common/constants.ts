@@ -13,4 +13,5 @@ export enum MESSAGES {
 
   COURSE_NOT_FOUND = 'Course not found',
   COULD_NOT_REFRESH_TOKEN = 'Could not refresh token',
+  EMAIL_NOT_FOUND= 'Email not found',
 }

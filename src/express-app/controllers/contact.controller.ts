@@ -59,6 +59,18 @@ export const getAllContact = CatchAsyncErrors(
   },
 );
 
+// export const getContactDetail = CatchAsyncErrors(
+//   async (_req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const contacts = await contactModel.find().sort({ createdAt: -1 });
+
+//       res.status(200).json({ success: true, contacts });
+//     } catch (error: any) {
+//       return next(new ErrorHandler(error.message, 400));
+//     }
+//   },
+// );
+
 export const deleteContact = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
