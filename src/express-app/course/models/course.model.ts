@@ -120,7 +120,7 @@ export interface ICourse extends Document {
   id: ObjectId;
   name: string;
   description?: string;
-  // category: string;
+  category: string;
   price: number;
   estimatedPrice?: number;
   thumbnail: {
@@ -207,7 +207,7 @@ const courseSchema = new Schema<ICourse>(
   {
     name: { type: String, required: true },
     description: { type: String, required: true },
-    // category: { type: String, required: true },
+    category: { type: String, required: true },
     price: { type: Number, required: true },
     estimatedPrice: { type: Number },
     thumbnail: {
