@@ -14,7 +14,7 @@ import { JwtAuthAdminGuard } from '../../auth';
 import { ReqContext } from '../../shared/request-context/req-context.decorator';
 import { RequestContext } from '../../shared/request-context/request-context.dto';
 
-@UseGuards(JwtAuthAdminGuard)
+// @UseGuards(JwtAuthAdminGuard)
 @Controller('admin/promotion')
 export class PromoCodeAdminController {
   constructor(private readonly promoService: PromotionCodeAdminService) {}
