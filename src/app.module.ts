@@ -6,9 +6,10 @@ import { CatModule } from './cat/cat.module';
 import { configuration, loggerOptions } from 'config';
 import { LoggerModule } from 'nestjs-pino';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CourseModule } from './course/course.module';
+// import { CourseModule } from './course/course.module';
 import { DatabaseModule } from './database/database.module';
 import { PromoCodeModule } from './promo-code/promo-code.module';
+import { SettingModule } from './setting/setting.module';
 
 @Module({
   imports: [
@@ -24,9 +25,10 @@ import { PromoCodeModule } from './promo-code/promo-code.module';
       inject: [ConfigService],
     }),
     CatModule,
-    CourseModule,
+    // CourseModule,
     DatabaseModule,
     PromoCodeModule,
+    SettingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
