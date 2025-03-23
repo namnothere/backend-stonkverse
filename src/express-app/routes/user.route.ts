@@ -65,7 +65,7 @@ userRouter.get(
   '/get-users',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin", "instructor"),
+  authorizeRoles("ADMIN", "INSTRUCTOR"),
   getAllUsers,
 );
 
@@ -73,7 +73,7 @@ userRouter.get(
   '/get-email',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("admin"),
+  authorizeRoles("ADMIN"),
   getAllEmail,
 );
 
@@ -81,7 +81,7 @@ userRouter.put(
   '/update-user-role',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   updateUserRole,
 );
 
@@ -89,7 +89,7 @@ userRouter.delete(
   '/delete-user/:id',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   deleteUser,
 );
 

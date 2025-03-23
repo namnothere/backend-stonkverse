@@ -32,6 +32,11 @@ export class PromoCodeAdminController {
     return this.promoService.getPromo(id);
   }
 
+  @Get('course/:id')
+  getPromoByCourse(@Param('id') id: string) {
+    return this.promoService.getPromotionsByCourse(id);
+  }
+
   @Get()
   getPromos() {
     return this.promoService.getPromos();

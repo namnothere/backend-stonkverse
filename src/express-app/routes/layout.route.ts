@@ -16,7 +16,7 @@ layoutRouter.post(
   '/create-layout',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   createLayout,
 );
 
@@ -24,7 +24,7 @@ layoutRouter.put(
   '/edit-layout',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   editLayout,
 );
 

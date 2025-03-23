@@ -41,6 +41,8 @@ export const MESSAGES = {
   PROMOTION_CODE_EXPIRED: 'Promotion code has expired',
   PROMOTION_CODE_INVALID: 'Promotion code is invalid',
   PROMOTION_CODE_EXISTS: 'Promotion code already exists',
+  PROMOTION_CODE_NOT_FOUND: 'Promotion not found',
+
 
 };
 

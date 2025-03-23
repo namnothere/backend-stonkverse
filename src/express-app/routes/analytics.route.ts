@@ -15,7 +15,7 @@ analyticsRouter.get(
   '/get-users-analytics',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   getUserAnalytics,
 );
 
@@ -23,7 +23,7 @@ analyticsRouter.get(
   '/get-courses-analytics',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   getCourseAnalytics,
 );
 
@@ -31,7 +31,7 @@ analyticsRouter.get(
   '/get-orders-analytics',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   getOrderAnalytics,
 );
 

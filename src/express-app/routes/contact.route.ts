@@ -15,7 +15,7 @@ contactRouter.get(
   '/get-contacts',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   getAllContact,
 );
 
@@ -23,7 +23,7 @@ contactRouter.delete(
   '/delete-contact/:id',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   deleteContact,
 );
 
