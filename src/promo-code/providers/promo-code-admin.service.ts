@@ -43,6 +43,15 @@ export class PromotionCodeAdminService {
     return promo;
   }
 
+  async getPromotionsByCourse(courseId: string) {
+    const promos = await this.promoCodeRepo.find({ course: courseId });
+    // console.log("promos:", promos)
+    if (!promos) {
+      if (!promos) throw new NotFoundException(MESSAGES.COMMENT_NOT_FOUND);
+    }
+    return promos;
+  }
+
   async getPromos() {
     const promos = await this.promoCodeRepo
       .find({ expDate: { $gt: new Date() } })

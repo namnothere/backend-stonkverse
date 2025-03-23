@@ -42,7 +42,7 @@ courseRouter.post(
   '/create-course',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   uploadCourse,
 );
 
@@ -50,7 +50,7 @@ courseRouter.put(
   '/edit-course/:id',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   editCourse,
 );
 
@@ -72,7 +72,7 @@ courseRouter.get(
   '/get-course-by-admin/:id',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   getCourseByAdmin,
 );
 
@@ -86,7 +86,7 @@ courseRouter.put(
   '/add-reply',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   addReplyToReview,
 );
 
@@ -116,7 +116,7 @@ courseRouter.get(
   '/get-all-courses',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   getAllCoursesAdmin,
 );
 
@@ -136,7 +136,7 @@ courseRouter.delete(
   '/delete-course/:id',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('admin'),
+  authorizeRoles('ADMIN'),
   deleteCourse,
 );
 
@@ -161,14 +161,14 @@ courseRouter.put(
   '/admin/courses/:id/approve',
   // updateAccessToken,
   // isAuthenticated,
-  // authorizeRoles('admin'),
+  // authorizeRoles('ADMIN'),
   approveCourse,
 );
 courseRouter.put(
   '/admin/courses/:id/reject',
   // updateAccessToken,
   // isAuthenticated,
-  // authorizeRoles('admin'),
+  // authorizeRoles('ADMIN'),
   rejectCourse,
 );
 
@@ -176,7 +176,7 @@ courseRouter.post(
   '/final-test',
   // updateAccessToken,
   // isAuthenticated,
-  // authorizeRoles('admin'),
+  // authorizeRoles('ADMIN'),
   uploadFinalTest,
 );
 
@@ -184,7 +184,7 @@ courseRouter.put(
   '/admin/final-test/:id/approve',
   // updateAccessToken,
   // isAuthenticated,
-  // authorizeRoles('admin'),
+  // authorizeRoles('ADMIN'),
   approveCourseFinalTest,
 );
 
@@ -192,7 +192,7 @@ courseRouter.put(
   '/admin/final-test/:id/reject',
   // updateAccessToken,
   // isAuthenticated,
-  // authorizeRoles('admin'),
+  // authorizeRoles('ADMIN'),
   rejectCourseFinalTest,
 );
 
@@ -200,7 +200,7 @@ courseRouter.get(
   '/admin/final-test/pending-review',
   // updateAccessToken,
   // isAuthenticated,
-  // authorizeRoles('admin'),
+  // authorizeRoles('ADMIN'),
   getPendingFinalTest,
 );
 
