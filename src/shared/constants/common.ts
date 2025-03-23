@@ -43,7 +43,8 @@ export const MESSAGES = {
   PROMOTION_CODE_EXISTS: 'Promotion code already exists',
   PROMOTION_CODE_NOT_FOUND: 'Promotion not found',
 
-
+  SETTING_ALREADY_EXISTS: 'Setting already exists',
+  SETTING_NOT_FOUND: 'Setting not found',
 };
 
 export const ROLES_KEY = 'roles';
