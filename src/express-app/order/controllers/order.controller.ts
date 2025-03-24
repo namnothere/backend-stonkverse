@@ -8,13 +8,13 @@ import { newOrder } from '../providers';
 import { sendMail } from '../../utils/sendMail';
 import { NotificationModel } from '../../models';
 import { redis } from '../../utils/redis';
-import { ObjectId } from 'mongoose';
 
 require('dotenv').config();
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 import Stripe from 'stripe';
 import { IPromoCode, PromoCodeModel } from '../../../promo-code/entities';
+import { makeId } from 'src/shared/utils';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 const calculateDiscount = (promo: IPromoCode, price: number) => {
@@ -48,18 +48,63 @@ export const createOrder = CatchAsyncErrors(
         (course: any) => course.courseId === courseId,
       );
 
-      if (courseExistInUser) {
-        return next(
-          new ErrorHandler('You have already purchased this course', 400),
-        );
-      }
-
       const course = await CourseModel.findById(courseId);
-      
       if (!course) {
         return next(new ErrorHandler('Course not found', 404));
       }
-      
+
+      // TODO: email coupon to user
+      if (courseExistInUser) {
+        // return next(
+        //   new ErrorHandler('You have already purchased this course', 400),
+        // );
+
+        await NotificationModel.create({
+          user: user?._id,
+          title: 'New Order',
+          message: `You have a new order from ${course.name}`,
+        });
+
+        const couponCode = makeId(8);
+        const coupon = await PromoCodeModel.create({
+          code: couponCode,
+          percentOff: 100,
+          usageCount: 0,
+          usageLimit: 1,
+          course: course._id,
+        })
+
+        await coupon.save();
+
+        try {
+
+          const mailData = {
+            order: {
+              _id: course._id.toString().slice(0, 6),
+              name: course.name,
+              price: course.price,
+              date: new Date().toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+              giftCode: couponCode
+            },
+          };
+
+          if (user) {
+            await sendMail({
+              email: user.email,
+              subject: 'Order Confirmation',
+              template: 're-order-confirmation.ejs',
+              data: mailData,
+            });
+          }
+        } catch (error: any) {
+          return next(new ErrorHandler(error.message, 500));
+        }
+      }
+
       const data: any = {
         courseId: course._id,
         userId: user?._id,
