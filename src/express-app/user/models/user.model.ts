@@ -144,7 +144,7 @@ export const learningProgressModel: Model<ILearningProgress> = mongoose.model(
 );
 
 // TODO: insert new document when user finish a course
-export const userScoreModel: Model<IUserScore> = mongoose.model( 
+export const userScoreModel: Model<IUserScore> = mongoose.model(
   'UserScore',
   UserScoreSchema,
 );

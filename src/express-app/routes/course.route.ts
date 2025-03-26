@@ -31,7 +31,6 @@ import {
   rejectCourseFinalTest,
   getPendingFinalTest,
   getCoursesByCategory,
-
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -128,7 +127,7 @@ courseRouter.post(
 );
 
 courseRouter.get('/get-reviews/:courseId', getCourseReviews);
-courseRouter.get("/get-courses/:categorySlug", getCoursesByCategory);
+courseRouter.get('/get-courses/:categorySlug', getCoursesByCategory);
 
 courseRouter.post('/get-vdo-cipher-otp', generateVideoUrl);
 
@@ -203,7 +202,6 @@ courseRouter.get(
   // authorizeRoles('ADMIN'),
   getPendingFinalTest,
 );
-
 
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 

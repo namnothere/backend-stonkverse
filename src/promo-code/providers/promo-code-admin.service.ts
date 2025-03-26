@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { IPromoCode, PromoCodeModel } from '../entities';
 import { CreatePromoCodeInput, UpdatePromoCodeInput } from '../dtos';
 import { MESSAGES } from '../../shared/constants';
@@ -13,7 +17,7 @@ export class PromotionCodeAdminService {
     // @InjectModel(PromoCode.name)
     // private readonly promoCodeRepo: Model<IPromoCode>,
     @InjectModel('PromoCode') private readonly promoCodeRepo: Model<IPromoCode>,
-  ) { }
+  ) {}
 
   // async createPromo(input: CreatePromoCodeInput, adminId: string) {
   //   const promo = this.promoCodeRepo.create({ ...input, createdBy: { id: adminId } });
@@ -21,8 +25,9 @@ export class PromotionCodeAdminService {
   // }
 
   async createPromo(input: CreatePromoCodeInput, adminId: string) {
-
-    const existingPromo = await this.promoCodeRepo.findOne({ code: input.code });
+    const existingPromo = await this.promoCodeRepo.findOne({
+      code: input.code,
+    });
     if (existingPromo) {
       throw new BadRequestException(MESSAGES.PROMOTION_CODE_EXISTS);
     }

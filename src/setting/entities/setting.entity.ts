@@ -17,7 +17,10 @@ export const FinalTestSettingSchema = new Schema<IFinalTestSetting>(
     instructionsMessage: { type: String, required: true },
     completionMessage: { type: String, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export const FinalTestSettingModel = model<IFinalTestSetting>('FinalTestSetting', FinalTestSettingSchema);
+export const FinalTestSettingModel = model<IFinalTestSetting>(
+  'FinalTestSetting',
+  FinalTestSettingSchema,
+);

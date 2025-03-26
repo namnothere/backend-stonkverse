@@ -1,5 +1,14 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateSettingInput, SettingFilterInput, UpdateSettingInput } from '../dtos';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  CreateSettingInput,
+  SettingFilterInput,
+  UpdateSettingInput,
+} from '../dtos';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { IFinalTestSetting } from '../entities';
@@ -8,29 +17,26 @@ import { ICourse, ICourseData } from 'src/express-app/course';
 
 @Injectable()
 export class SettingAdminService {
-
   constructor(
     @InjectModel('FinalTestSetting')
     private readonly settingRepo: Model<IFinalTestSetting>,
     @InjectModel('Course')
     private readonly courseRepo: Model<ICourse>,
     @InjectModel('CourseData')
-    private readonly courseDataRepo: Model<ICourseData>
-  ) { }
+    private readonly courseDataRepo: Model<ICourseData>,
+  ) {}
 
   async create(input: CreateSettingInput) {
-
     const { course, courseData } = input;
 
     if (!course && !courseData) {
-      throw new NotFoundException('Either courseId or courseDataId is required');
+      throw new NotFoundException(
+        'Either courseId or courseDataId is required',
+      );
     }
 
     const existingSetting = await this.settingRepo.findOne({
-      $or: [
-        { course: course || null },
-        { courseData: courseData || null }
-      ]
+      $or: [{ course: course || null }, { courseData: courseData || null }],
     });
 
     if (existingSetting) {
@@ -43,7 +49,8 @@ export class SettingAdminService {
 
     if (courseData) {
       const courseDataExists = await this.courseDataRepo.findById(courseData);
-      if (!courseDataExists) throw new NotFoundException(MESSAGES.COURSE_DATA_NOT_FOUND);
+      if (!courseDataExists)
+        throw new NotFoundException(MESSAGES.COURSE_DATA_NOT_FOUND);
     }
 
     const setting = new this.settingRepo({ ...input });
@@ -67,7 +74,6 @@ export class SettingAdminService {
     }
 
     return setting;
-
   }
 
   findOne(id: string) {
@@ -80,7 +86,6 @@ export class SettingAdminService {
   }
 
   async update(id: string, input: UpdateSettingInput) {
-
     const setting = await this.settingRepo.findById(id);
 
     if (!setting) {

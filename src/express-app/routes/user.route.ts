@@ -20,7 +20,6 @@ import {
   updateUserInfo,
   updateUserRole,
   getAllEmail,
-
 } from '../user/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 
@@ -65,7 +64,7 @@ userRouter.get(
   '/get-users',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("ADMIN", "INSTRUCTOR"),
+  authorizeRoles('ADMIN', 'INSTRUCTOR'),
   getAllUsers,
 );
 
@@ -73,7 +72,7 @@ userRouter.get(
   '/get-email',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles("ADMIN"),
+  authorizeRoles('ADMIN'),
   getAllEmail,
 );
 

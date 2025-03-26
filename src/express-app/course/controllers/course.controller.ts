@@ -86,15 +86,15 @@ export const editCourse = CatchAsyncErrors(
         return;
       }
 
-      const categories = await LayoutModel.findOne({ type: "Categories" });
+      const categories = await LayoutModel.findOne({ type: 'Categories' });
 
       const oldCategory = categories?.categories.find(
-        (category) => category.title === existCourse.category
+        (category) => category.title === existCourse.category,
       );
 
       if (oldCategory) {
         const courseIndex = oldCategory?.courses?.findIndex(
-          (course: any) => course.toString() === existCourse._id.toString()
+          (course: any) => course.toString() === existCourse._id.toString(),
         );
 
         oldCategory.courses?.splice(courseIndex, 1);
@@ -153,9 +153,9 @@ export const editCourse = CatchAsyncErrors(
 
       if (data.category && data.category !== existCourse.category) {
         const newCategory = categories?.categories.find(
-          (category) => category.title === data.category
+          (category) => category.title === data.category,
         );
-        
+
         if (newCategory) {
           newCategory.courses.push(updatedCourse._id);
           await categories?.save();
@@ -164,7 +164,7 @@ export const editCourse = CatchAsyncErrors(
         // Save categories anyway to persist the removal from old category
         await categories.save();
       }
-      
+
       res.status(200).json({ success: true, course: updatedCourse });
     } catch (error: any) {
       next(new ErrorHandler(error.message, error.status || 500));
@@ -718,15 +718,15 @@ export const deleteCourse = CatchAsyncErrors(
 
       await redis.del(id);
 
-      const categories = await LayoutModel.findOne({ type: "Categories" });
+      const categories = await LayoutModel.findOne({ type: 'Categories' });
 
       const oldCategory = categories?.categories.find(
-        (category) => category.title === course.category
+        (category) => category.title === course.category,
       );
 
       if (oldCategory) {
         const courseIndex = oldCategory?.courses?.findIndex(
-          (course: any) => course.toString() === course._id.toString()
+          (course: any) => course.toString() === course._id.toString(),
         );
 
         oldCategory.courses?.splice(courseIndex, 1);
@@ -947,7 +947,7 @@ export const getUnapprovedCourses = CatchAsyncErrors(
         $or: [
           { status: COURSE_STATUS.PENDING_REVIEW },
           { status: { $exists: false } },
-        ]
+        ],
       })
         .skip(parseInt((offset ?? 0) as string, 10))
         .limit(parseInt((limit ?? 0) as string, 10));
@@ -971,7 +971,17 @@ export const approveCourse = CatchAsyncErrors(
         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
       }
 
-      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      await NotificationModel.create({
+        user: course.createdBy,
+        title: 'Approved Course',
+        message: `Your course ${course.name} has been approved`,
+      });
+
+      const updatedCourse = await CourseModel.findByIdAndUpdate(
+        courseId,
+        { status: COURSE_STATUS.APPROVED },
+        { new: true },
+      );
       res.status(200).json(updatedCourse);
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
@@ -987,7 +997,16 @@ export const rejectCourse = CatchAsyncErrors(
         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
       }
 
-      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
+      const updatedCourse = await CourseModel.findByIdAndUpdate(
+        courseId,
+        { status: COURSE_STATUS.REJECTED },
+        { new: true },
+      );
+      await NotificationModel.create({
+        user: course.createdBy,
+        title: 'Rejected Course',
+        message: `Your course ${course.name} has been rejected`,
+      });
       res.status(200).json(updatedCourse);
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
@@ -1013,12 +1032,25 @@ export const approveCourseFinalTest = CatchAsyncErrors(
       }
 
       // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
-      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, {
-        $set: { "courseData.$[finalTest].status": COURSE_STATUS.APPROVED }
-      }, {
-        arrayFilters: [{ "finalTest._id": finalTestId, "finalTest.isFinalTest": true }],
-        new: true
+      const updatedCourse = await CourseModel.findByIdAndUpdate(
+        courseId,
+        {
+          $set: { 'courseData.$[finalTest].status': COURSE_STATUS.APPROVED },
+        },
+        {
+          arrayFilters: [
+            { 'finalTest._id': finalTestId, 'finalTest.isFinalTest': true },
+          ],
+          new: true,
+        },
+      );
+
+      await NotificationModel.create({
+        user: course.createdBy,
+        title: 'Approved Final Test',
+        message: `Your Final Test in course ${course.name} has been approved`,
       });
+
       res.status(200).json(updatedCourse);
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
@@ -1045,18 +1077,31 @@ export const rejectCourseFinalTest = CatchAsyncErrors(
       }
 
       // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
-      const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, {
-        $set: { "courseData.$[finalTest].status": COURSE_STATUS.REJECTED }
-      }, {
-        arrayFilters: [{ "finalTest._id": finalTestId, "finalTest.isFinalTest": true }],
-        new: true
+      const updatedCourse = await CourseModel.findByIdAndUpdate(
+        courseId,
+        {
+          $set: { 'courseData.$[finalTest].status': COURSE_STATUS.REJECTED },
+        },
+        {
+          arrayFilters: [
+            { 'finalTest._id': finalTestId, 'finalTest.isFinalTest': true },
+          ],
+          new: true,
+        },
+      );
+
+      await NotificationModel.create({
+        user: course.createdBy,
+        title: 'Rejected Final Test',
+        message: `Your Final Test in course ${course.name} has been rejected`,
       });
+
       res.status(200).json(updatedCourse);
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
     }
   },
-)
+);
 
 export const uploadFinalTest = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -1069,7 +1114,9 @@ export const uploadFinalTest = CatchAsyncErrors(
         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
       }
 
-      const isExistingFinalTest = course.courseData.find((item) => item.isFinalTest);
+      const isExistingFinalTest = course.courseData.find(
+        (item) => item.isFinalTest,
+      );
 
       if (isExistingFinalTest) {
         return new ErrorHandler(`Final test already exists`, 400);
@@ -1096,7 +1143,6 @@ export const uploadFinalTest = CatchAsyncErrors(
   },
 );
 
-
 export const getPendingFinalTest = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -1105,10 +1151,10 @@ export const getPendingFinalTest = CatchAsyncErrors(
         courseData: {
           $elemMatch: {
             isFinalTest: true,
-            status: COURSE_DATA_STATUS.PENDING_REVIEW
-          }
-        }
-      })
+            status: COURSE_DATA_STATUS.PENDING_REVIEW,
+          },
+        },
+      });
       // .select({
       //   courseData: { $elemMatch: { isFinalTest: true } }
       // });
@@ -1125,21 +1171,21 @@ export const getCoursesByCategory = CatchAsyncErrors(
     try {
       const { categorySlug } = req.params;
 
-      const categoryLowerCase = categorySlug.replace(/-/g, " ");
+      const categoryLowerCase = categorySlug.replace(/-/g, ' ');
 
-      const arr = categoryLowerCase.split(" ");
-      for (var i = 0; i < arr.length; i++) {
+      const arr = categoryLowerCase.split(' ');
+      for (let i = 0; i < arr.length; i++) {
         arr[i] = arr[i].charAt(0).toUpperCase() + arr[i].slice(1);
       }
-      const category = arr.join(" ");
+      const category = arr.join(' ');
 
       const courses = await CourseModel.find({ category }).select(
-        "-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links"
+        '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
       );
 
       res.status(200).json({ success: true, courses, category });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  }
+  },
 );
