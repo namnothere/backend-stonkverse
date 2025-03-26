@@ -30,7 +30,6 @@
 
 // export const PromoCodeSchema = SchemaFactory.createForClass(PromoCode);
 
-
 import { Schema, model, Document, Types } from 'mongoose';
 export interface IPromoCode extends Document {
   code: string;
@@ -52,7 +51,7 @@ export const PromoCodeSchema = new Schema<IPromoCode>(
     usageCount: { type: Number, default: 0 },
     createdBy: { type: Types.ObjectId, ref: 'User', default: null },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const PromoCodeModel = model<IPromoCode>('PromoCode', PromoCodeSchema);

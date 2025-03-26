@@ -25,4 +25,4 @@ import { Schema } from 'mongoose';
   controllers: Object.values(controllers),
   providers: Object.values(providers),
 })
-export class SettingModule { }
+export class SettingModule {}

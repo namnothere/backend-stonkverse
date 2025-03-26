@@ -1,9 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import {
-  userModel,
-  IUser,
-  learningProgressModel
-} from '../models';
+import { userModel, IUser, learningProgressModel } from '../models';
 import ErrorHandler from '../../utils/ErrorHandler';
 import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';
 import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
@@ -611,15 +607,15 @@ export const updateLessonCompletion = CatchAsyncErrors(
 export const getAllEmail = CatchAsyncErrors(
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const email = await userModel.distinct("email");
- 
+      const email = await userModel.distinct('email');
+
       if (email.length === 0) {
         return res
           .status(404)
           .json({ success: false, message: MESSAGES.EMAIL_NOT_FOUND });
       }
 
-      res.status(200).json({ success: true, email});
+      res.status(200).json({ success: true, email });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }

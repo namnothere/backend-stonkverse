@@ -1,6 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { SettingAdminService } from '../providers/setting-admin.service';
-import { CreateSettingInput, SettingFilterInput, UpdateSettingInput } from '../dtos';
+import {
+  CreateSettingInput,
+  SettingFilterInput,
+  UpdateSettingInput,
+} from '../dtos';
 
 @Controller('admin/setting')
 export class SettingAdminController {
@@ -22,7 +34,10 @@ export class SettingAdminController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSettingInput: UpdateSettingInput) {
+  update(
+    @Param('id') id: string,
+    @Body() updateSettingInput: UpdateSettingInput,
+  ) {
     return this.settingService.update(id, updateSettingInput);
   }
 

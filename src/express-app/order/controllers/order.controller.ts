@@ -22,7 +22,7 @@ const calculateDiscount = (promo: IPromoCode, price: number) => {
     return (price * (100 - promo.percentOff)) / 100;
   }
   return price;
-}
+};
 
 // Create order
 export const createOrder = CatchAsyncErrors(
@@ -72,12 +72,11 @@ export const createOrder = CatchAsyncErrors(
           usageCount: 0,
           usageLimit: 1,
           course: course._id,
-        })
+        });
 
         await coupon.save();
 
         try {
-
           const mailData = {
             order: {
               _id: course._id.toString().slice(0, 6),
@@ -88,7 +87,7 @@ export const createOrder = CatchAsyncErrors(
                 month: 'long',
                 day: 'numeric',
               }),
-              giftCode: couponCode
+              giftCode: couponCode,
             },
           };
 

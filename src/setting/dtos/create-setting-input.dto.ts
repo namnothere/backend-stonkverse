@@ -1,4 +1,4 @@
-import { IsMongoId, IsOptional } from "class-validator";
+import { IsMongoId, IsOptional } from 'class-validator';
 
 export class CreateSettingInput {
   @IsOptional()

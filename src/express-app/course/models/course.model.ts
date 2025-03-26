@@ -142,6 +142,7 @@ export interface ICourse extends Document {
   ratings?: number;
   purchased?: number;
   status: COURSE_STATUS;
+  createdBy: Types.ObjectId;
 }
 
 const replySchema = new Schema<IReply>(
@@ -237,7 +238,12 @@ const courseSchema = new Schema<ICourse>(
     ratings: { type: Number, default: 0 },
     purchased: { type: Number, default: 0 },
     // isApproved: { type: Boolean, default: false },
-    status: { type: String, enum: COURSE_STATUS, default: COURSE_STATUS.PENDING_REVIEW },
+    status: {
+      type: String,
+      enum: COURSE_STATUS,
+      default: COURSE_STATUS.PENDING_REVIEW,
+    },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );
