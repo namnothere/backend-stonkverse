@@ -274,7 +274,7 @@ export const getCourseByUser = CatchAsyncErrors(
 );
 
 export const getCourseByAdmin = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
       const course = await CourseModel.findById(courseId);
@@ -327,11 +327,6 @@ export const addQuestion = CatchAsyncErrors(
       courseContent.questions.push(newQuestion);
 
       // [LATER]
-      const notification = await NotificationModel.create({
-        user: req.user?._id,
-        title: 'New Question Created',
-        message: `You have a new question in ${courseContent.title}`,
-      });
 
       await course?.save();
 
@@ -594,10 +589,6 @@ export const addReview = CatchAsyncErrors(
         const updatedCourse =
           await CourseModel.findById(courseId).populate('reviews.user');
 
-        const notification = {
-          title: 'New Review Created',
-          message: `${req.user?.name} has given a review in ${course?.name}`,
-        };
 
         res.status(200).json({
           success: true,
@@ -940,7 +931,7 @@ export const getCurrentUserProgress = CatchAsyncErrors(
 );
 
 export const getUnapprovedCourses = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const { offset, limit } = req.query;
       const courses = await CourseModel.find({
@@ -960,7 +951,7 @@ export const getUnapprovedCourses = CatchAsyncErrors(
 );
 
 export const approveCourse = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
 
@@ -989,7 +980,7 @@ export const approveCourse = CatchAsyncErrors(
   },
 );
 export const rejectCourse = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
       const course = await CourseModel.findById(courseId);
@@ -1014,7 +1005,7 @@ export const rejectCourse = CatchAsyncErrors(
   },
 );
 export const approveCourseFinalTest = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
       const finalTestId = req.params.finalTestId;
@@ -1059,7 +1050,7 @@ export const approveCourseFinalTest = CatchAsyncErrors(
 );
 
 export const rejectCourseFinalTest = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
       const finalTestId = req.params.finalTestId;
@@ -1144,7 +1135,7 @@ export const uploadFinalTest = CatchAsyncErrors(
 );
 
 export const getPendingFinalTest = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response) => {
     try {
       const { offset, limit } = req.query;
       const courses = await CourseModel.find({
@@ -1189,3 +1180,87 @@ export const getCoursesByCategory = CatchAsyncErrors(
     }
   },
 );
+
+const getLatestAnswer = (answers: IAnswerQuiz[], userId: string): IAnswerQuiz | undefined => {
+  return answers
+    .filter((answer) => answer.user?._id?.toString() === userId)
+    .reduce<IAnswerQuiz | undefined>((latest, current) => (latest && latest.createdAt > current.createdAt ? latest : current), undefined);
+};
+
+const calculateCourseScores = (course: ICourse, userId: string) => {
+
+  let finalTestScore = 0;
+  let finalTestMaxScore = 0;
+
+  let totalScore = 0;
+  let totalMaxScore = 0;
+  let regularTestScores: number[] = [];
+
+
+  const quizScores = course.courseData.flatMap((data: ICourseData) => {
+    var isFinalTestQuestions = false;
+    if (data.isFinalTest) isFinalTestQuestions = true;
+    return data.quiz.map((question: IQuestionQuiz) => {
+      const latestAnswer = getLatestAnswer(question.answers, userId);
+      const score = latestAnswer ? latestAnswer.score : 0;
+      const maxScore = question.maxScore;
+
+      if (isFinalTestQuestions) {
+        finalTestScore = score;
+        finalTestMaxScore = maxScore;
+      } else {
+        regularTestScores.push(score / maxScore); // Store percentage
+      }
+
+      totalScore += score;
+      totalMaxScore += maxScore;
+
+      return { title: question.title || '', score };
+
+    });
+  })
+
+  const avgRegularTestScore =
+    regularTestScores.length > 0
+      ? regularTestScores.reduce((sum, val) => sum + val, 0) / regularTestScores.length
+      : 0;
+
+  const weightedFinalScore =
+    avgRegularTestScore * 0.2 * 100 + (finalTestScore / finalTestMaxScore) * 0.8 * 100;
+
+  return { totalScore: weightedFinalScore, totalMaxScore: 100, quizScores };
+};
+
+export const calculateFinalTestScore = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseId } = req.params;
+      const userId = req.user?._id;
+      const course = await CourseModel.findById(courseId).populate('courseData.quiz.answers.user');
+
+      if (!course) {
+        return res.status(404).json({ success: false, message: 'Course not found' });
+      }
+
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { totalScore, totalMaxScore, quizScores } = calculateCourseScores(course, userId);
+
+      const completionRate = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+
+      res.status(200).json({
+        success: true,
+        courseId: course._id,
+        courseName: course.name,
+        totalScore,
+        totalMaxScore,
+        completionRate,
+        quizScores,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+)

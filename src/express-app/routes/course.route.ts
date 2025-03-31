@@ -31,6 +31,7 @@ import {
   rejectCourseFinalTest,
   getPendingFinalTest,
   getCoursesByCategory,
+  calculateFinalTestScore,
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -202,6 +203,13 @@ courseRouter.get(
   // authorizeRoles('ADMIN'),
   getPendingFinalTest,
 );
+
+courseRouter.get(
+  '/final-test/score/:courseId',
+  updateAccessToken,
+  isAuthenticated,
+  calculateFinalTestScore
+)
 
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
