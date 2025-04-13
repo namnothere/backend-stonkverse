@@ -42,7 +42,7 @@ courseRouter.post(
   '/create-course',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('ADMIN'),
+  authorizeRoles('ADMIN', 'INSTRUCTOR'),
   uploadCourse,
 );
 
@@ -159,16 +159,16 @@ courseRouter.get(
 
 courseRouter.put(
   '/admin/courses/:id/approve',
-  // updateAccessToken,
-  // isAuthenticated,
-  // authorizeRoles('ADMIN'),
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN'),
   approveCourse,
 );
 courseRouter.put(
   '/admin/courses/:id/reject',
-  // updateAccessToken,
-  // isAuthenticated,
-  // authorizeRoles('ADMIN'),
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN'),
   rejectCourse,
 );
 
