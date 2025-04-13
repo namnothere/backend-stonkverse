@@ -177,7 +177,7 @@ export const getSingleCourse = CatchAsyncErrors(
     try {
       const courseId = req.params.id;
 
-      const course = await CourseModel.findById(courseId)
+      const course = await CourseModel.findOne({ _id: courseId, status: 'APPROVED' })
         .select(
           '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
         )
@@ -197,7 +197,7 @@ export const getSingleCourse = CatchAsyncErrors(
 export const getAllCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const courses = await CourseModel.find().select(
+      const courses = await CourseModel.find({status: 'APPROVED'}).select(
         '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
       );
 
@@ -215,6 +215,7 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         name: { $regex: query, $options: 'i' },
+        status: 'APPROVED'
       }).select('thumbnail name ratings');
 
       console.log(courses[0]);
@@ -681,7 +682,11 @@ export const getUserCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { courseIds } = req.body;
-      const courses = await CourseModel.find({ _id: { $in: courseIds } })
+      const courses = await CourseModel.find({
+        _id: { $in: courseIds },
+        status: 'APPROVED',
+
+      })
         .sort({
           createdAt: -1,
         })
@@ -1105,6 +1110,10 @@ export const uploadFinalTest = CatchAsyncErrors(
         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
       }
 
+      if (course.status !== 'APPROVED') {
+        return next(new ErrorHandler('Course must be approved before uploading final test', 403));
+      }
+
       const isExistingFinalTest = course.courseData.find(
         (item) => item.isFinalTest,
       );
@@ -1162,17 +1171,16 @@ export const getCoursesByCategory = CatchAsyncErrors(
     try {
       const { categorySlug } = req.params;
 
-      const categoryLowerCase = categorySlug.replace(/-/g, ' ');
+      const category = categorySlug.replace(/-/g, ' ');
 
-      const arr = categoryLowerCase.split(' ');
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = arr[i].charAt(0).toUpperCase() + arr[i].slice(1);
-      }
-      const category = arr.join(' ');
-
-      const courses = await CourseModel.find({ category }).select(
+      const courses = await CourseModel.find({
+        category: { $regex: new RegExp('^' + category + '$', 'i') },
+        status: "APPROVED"
+      }).select(
         '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
       );
+
+      console.log("test category by course:", courses)
 
       res.status(200).json({ success: true, courses, category });
     } catch (error: any) {

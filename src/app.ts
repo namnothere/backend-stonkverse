@@ -15,7 +15,15 @@ import { rateLimit } from 'express-rate-limit';
 import { contactRouter } from './express-app/routes/contact.route';
 import mongoose from 'mongoose';
 
+import { v2 as cloudinary } from "cloudinary";
+
 require('dotenv').config();
+// Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_SECRET_KEY,
+});
 
 export const app = express.default();
 
