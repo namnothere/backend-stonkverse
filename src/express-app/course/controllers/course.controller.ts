@@ -14,12 +14,10 @@ import {
 } from '../models';
 import { redis } from '../../utils/redis';
 import mongoose from 'mongoose';
-import { sendMail } from '../../utils/sendMail';
 import { NotificationModel } from '../../models';
 import axios from 'axios';
 import { LayoutModel } from '../../layout/models';
-import { getUserInfo } from '../../user/controllers';
-import { userModel } from '../../user/models';
+import { TEST_COURSE_STATUS, userScoreModel } from '../../user/models';
 import { MESSAGES } from '../../shared/common';
 
 export const uploadCourse = CatchAsyncErrors(
@@ -1258,6 +1256,16 @@ export const calculateFinalTestScore = CatchAsyncErrors(
 
       const completionRate = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
 
+      // update userScore
+      await userScoreModel.deleteOne({ user: userId, courseId });
+
+      await userScoreModel.create({
+        user: userId,
+        courseId,
+        finalScore: totalScore,
+        testCourseStatus: completionRate >= 50 ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED,
+      });
+      
       res.status(200).json({
         success: true,
         courseId: course._id,
@@ -1267,6 +1275,31 @@ export const calculateFinalTestScore = CatchAsyncErrors(
         completionRate,
         quizScores,
       });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+)
+
+export const getUserScores = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+      // const userId = req.user?._id ;
+      const userScores = await userScoreModel.find({ user: userId }).populate('courseId');
+      res.status(200).json({ success: true, userScores });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+)
+
+export const getMyUserScores = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id ;
+      const userScores = await userScoreModel.find({ user: userId }).populate('courseId');
+      res.status(200).json({ success: true, userScores });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
