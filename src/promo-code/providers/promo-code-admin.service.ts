@@ -24,7 +24,7 @@ export class PromotionCodeAdminService {
   //   return this.promoCodeRepo.save(promo);
   // }
 
-  async createPromo(input: CreatePromoCodeInput, adminId: string) {
+  async createPromo(input: CreatePromoCodeInput) {
     const existingPromo = await this.promoCodeRepo.findOne({
       code: input.code,
     });
@@ -38,7 +38,7 @@ export class PromotionCodeAdminService {
       throw new BadRequestException(MESSAGES.PROMOTION_CODE_INVALID);
     }
 
-    const promo = new this.promoCodeRepo({ ...input, createdBy: adminId });
+    const promo = new this.promoCodeRepo({ ...input });
     return promo.save();
   }
 
