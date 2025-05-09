@@ -34,6 +34,7 @@ import {
   calculateFinalTestScore,
   getUserScores,
   getMyUserScores,
+  getUsersByCourseId,
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -210,22 +211,30 @@ courseRouter.get(
   '/final-test/score/:courseId',
   updateAccessToken,
   isAuthenticated,
-  calculateFinalTestScore
-)
+  calculateFinalTestScore,
+);
 
 courseRouter.get(
   '/admin/user-scores/:userId',
   updateAccessToken,
   isAuthenticated,
-  getUserScores
-)
+  getUserScores,
+);
 
 courseRouter.get(
   '/user-scores',
   updateAccessToken,
   isAuthenticated,
-  getMyUserScores
-)
+  getMyUserScores,
+);
+
+courseRouter.get(
+  '/admin/users/:courseId',
+  // updateAccessToken,
+  // isAuthenticated,
+  // authorizeRoles('ADMIN'),
+  getUsersByCourseId,
+);
 
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
