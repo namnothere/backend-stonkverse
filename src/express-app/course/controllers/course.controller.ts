@@ -19,6 +19,7 @@ import axios from 'axios';
 import { LayoutModel } from '../../layout/models';
 import { TEST_COURSE_STATUS, userScoreModel } from '../../user/models';
 import { MESSAGES } from '../../shared/common';
+import { userModel } from '../../user/models';
 
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -175,7 +176,10 @@ export const getSingleCourse = CatchAsyncErrors(
     try {
       const courseId = req.params.id;
 
-      const course = await CourseModel.findOne({ _id: courseId, status: 'APPROVED' })
+      const course = await CourseModel.findOne({
+        _id: courseId,
+        status: 'APPROVED',
+      })
         .select(
           '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
         )
@@ -195,7 +199,7 @@ export const getSingleCourse = CatchAsyncErrors(
 export const getAllCourses = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const courses = await CourseModel.find({status: 'APPROVED'}).select(
+      const courses = await CourseModel.find({ status: 'APPROVED' }).select(
         '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
       );
 
@@ -213,7 +217,7 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         name: { $regex: query, $options: 'i' },
-        status: 'APPROVED'
+        status: 'APPROVED',
       }).select('thumbnail name ratings');
 
       console.log(courses[0]);
@@ -588,7 +592,6 @@ export const addReview = CatchAsyncErrors(
         const updatedCourse =
           await CourseModel.findById(courseId).populate('reviews.user');
 
-
         res.status(200).json({
           success: true,
           reviews: updatedCourse?.reviews,
@@ -683,7 +686,6 @@ export const getUserCourses = CatchAsyncErrors(
       const courses = await CourseModel.find({
         _id: { $in: courseIds },
         status: 'APPROVED',
-
       })
         .sort({
           createdAt: -1,
@@ -1109,7 +1111,12 @@ export const uploadFinalTest = CatchAsyncErrors(
       }
 
       if (course.status !== 'APPROVED') {
-        return next(new ErrorHandler('Course must be approved before uploading final test', 403));
+        return next(
+          new ErrorHandler(
+            'Course must be approved before uploading final test',
+            403,
+          ),
+        );
       }
 
       const isExistingFinalTest = course.courseData.find(
@@ -1173,12 +1180,12 @@ export const getCoursesByCategory = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         category: { $regex: new RegExp('^' + category + '$', 'i') },
-        status: "APPROVED"
+        status: 'APPROVED',
       }).select(
         '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
       );
 
-      console.log("test category by course:", courses)
+      console.log('test category by course:', courses);
 
       res.status(200).json({ success: true, courses, category });
     } catch (error: any) {
@@ -1187,24 +1194,27 @@ export const getCoursesByCategory = CatchAsyncErrors(
   },
 );
 
-const getLatestAnswer = (answers: IAnswerQuiz[], userId: string): IAnswerQuiz | undefined => {
+const getLatestAnswer = (
+  answers: IAnswerQuiz[],
+  userId: string,
+): IAnswerQuiz | undefined => {
   return answers
     .filter((answer) => answer.user?._id?.toString() === userId)
-    .reduce<IAnswerQuiz | undefined>((latest, current) => (latest && latest.createdAt > current.createdAt ? latest : current), undefined);
+    .reduce<
+      IAnswerQuiz | undefined
+    >((latest, current) => (latest && latest.createdAt > current.createdAt ? latest : current), undefined);
 };
 
 const calculateCourseScores = (course: ICourse, userId: string) => {
-
   let finalTestScore = 0;
   let finalTestMaxScore = 0;
 
   let totalScore = 0;
   let totalMaxScore = 0;
-  let regularTestScores: number[] = [];
-
+  const regularTestScores: number[] = [];
 
   const quizScores = course.courseData.flatMap((data: ICourseData) => {
-    var isFinalTestQuestions = false;
+    let isFinalTestQuestions = false;
     if (data.isFinalTest) isFinalTestQuestions = true;
     return data.quiz.map((question: IQuestionQuiz) => {
       const latestAnswer = getLatestAnswer(question.answers, userId);
@@ -1222,17 +1232,18 @@ const calculateCourseScores = (course: ICourse, userId: string) => {
       totalMaxScore += maxScore;
 
       return { title: question.title || '', score };
-
     });
-  })
+  });
 
   const avgRegularTestScore =
     regularTestScores.length > 0
-      ? regularTestScores.reduce((sum, val) => sum + val, 0) / regularTestScores.length
+      ? regularTestScores.reduce((sum, val) => sum + val, 0) /
+        regularTestScores.length
       : 0;
 
   const weightedFinalScore =
-    avgRegularTestScore * 0.2 * 100 + (finalTestScore / finalTestMaxScore) * 0.8 * 100;
+    avgRegularTestScore * 0.2 * 100 +
+    (finalTestScore / finalTestMaxScore) * 0.8 * 100;
 
   return { totalScore: weightedFinalScore, totalMaxScore: 100, quizScores };
 };
@@ -1242,19 +1253,29 @@ export const calculateFinalTestScore = CatchAsyncErrors(
     try {
       const { courseId } = req.params;
       const userId = req.user?._id;
-      const course = await CourseModel.findById(courseId).populate('courseData.quiz.answers.user');
+      const course = await CourseModel.findById(courseId).populate(
+        'courseData.quiz.answers.user',
+      );
 
       if (!course) {
-        return res.status(404).json({ success: false, message: 'Course not found' });
+        return res
+          .status(404)
+          .json({ success: false, message: 'Course not found' });
       }
 
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' });
+        return res
+          .status(401)
+          .json({ success: false, message: 'Unauthorized' });
       }
 
-      const { totalScore, totalMaxScore, quizScores } = calculateCourseScores(course, userId);
+      const { totalScore, totalMaxScore, quizScores } = calculateCourseScores(
+        course,
+        userId,
+      );
 
-      const completionRate = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+      const completionRate =
+        totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
 
       // update userScore
       await userScoreModel.deleteOne({ user: userId, courseId });
@@ -1263,9 +1284,12 @@ export const calculateFinalTestScore = CatchAsyncErrors(
         user: userId,
         courseId,
         finalScore: totalScore,
-        testCourseStatus: completionRate >= 50 ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED,
+        testCourseStatus:
+          completionRate >= 50
+            ? TEST_COURSE_STATUS.PASSED
+            : TEST_COURSE_STATUS.FAILED,
       });
-      
+
       res.status(200).json({
         success: true,
         courseId: course._id,
@@ -1278,30 +1302,56 @@ export const calculateFinalTestScore = CatchAsyncErrors(
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  }
-)
+  },
+);
 
 export const getUserScores = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { userId } = req.params;
       // const userId = req.user?._id ;
-      const userScores = await userScoreModel.find({ user: userId }).populate('courseId');
+      const userScores = await userScoreModel
+        .find({ user: userId })
+        .populate('courseId');
       res.status(200).json({ success: true, userScores });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  }
-)
+  },
+);
 
 export const getMyUserScores = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?._id ;
-      const userScores = await userScoreModel.find({ user: userId }).populate('courseId');
+      const userId = req.user?._id;
+      const userScores = await userScoreModel
+        .find({ user: userId })
+        .populate('courseId');
       res.status(200).json({ success: true, userScores });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
-  }
-)
+  },
+);
+
+export const getUsersByCourseId = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseId } = req.params;
+
+      const users = await userModel
+        .find({
+          'courses.courseId': courseId,
+        })
+        .select('name email avatar role createdAt');
+
+      res.status(200).json({
+        success: true,
+        users,
+        total: users.length,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  },
+);

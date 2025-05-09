@@ -15,7 +15,7 @@ import { rateLimit } from 'express-rate-limit';
 import { contactRouter } from './express-app/routes/contact.route';
 import mongoose from 'mongoose';
 
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary } from 'cloudinary';
 
 require('dotenv').config();
 // Cloudinary config
