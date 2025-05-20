@@ -35,6 +35,7 @@ import {
   getUserScores,
   getMyUserScores,
   getUsersByCourseId,
+  getUsersInMyCourses,
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -233,9 +234,16 @@ courseRouter.get(
   // updateAccessToken,
   // isAuthenticated,
   // authorizeRoles('ADMIN'),
-  getUsersByCourseId,
+  getUsersByCourseId
 );
 
+courseRouter.get(
+  '/my-courses/users',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN', 'INSTRUCTOR'),
+  getUsersInMyCourses
+);
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
 // export default courseRouter;
