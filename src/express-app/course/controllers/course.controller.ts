@@ -1345,13 +1345,118 @@ export const getUsersByCourseId = CatchAsyncErrors(
         })
         .select('name email avatar role createdAt');
 
+
+      const userScores = await userScoreModel.find({
+        courseId: courseId.toString()
+      }).populate('user');
+      
+      const userScoreMap = new Map(
+        userScores.map(score => [score.user._id.toString(), score])
+      );
+
+      const usersWithScores = users.map(user => {
+        const userScore = userScoreMap.get(user._id.toString());
+        return {
+          ...user.toObject(),
+          score: userScore ? {
+            finalScore: userScore.finalScore || 0,
+            testCourseStatus: userScore.testCourseStatus || 0
+          } : {}
+        };
+      });
+
       res.status(200).json({
         success: true,
-        users,
+        users: usersWithScores,
         total: users.length,
       });
     } catch (error: any) {
+      console.error('Error in getUsersByCourseId:', error);
       return next(new ErrorHandler(error.message, 500));
     }
   },
+);
+
+export const getUsersInMyCourses = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id;
+      const userRole = req.user?.role;
+
+      if (!userId) {
+        return next(new ErrorHandler('User not found', 404));
+      }
+
+      const myCourses = userRole === 'ADMIN' 
+        ? await CourseModel.find({})
+        : await CourseModel.find({ createdBy: userId });
+      
+      if (!myCourses.length) {
+        return res.status(200).json({
+          success: true,
+          message: userRole === 'ADMIN' 
+            ? 'No courses found in the system'
+            : 'You have not created any courses yet',
+          users: [],
+          total: 0
+        });
+      }
+
+      const courseIds = myCourses.map(course => course._id);
+
+      const users = await userModel
+        .find({
+          'courses.courseId': { $in: courseIds }
+        })
+        .select('name email avatar role createdAt courses');
+
+      const userScores = await userScoreModel
+        .find({
+          courseId: { $in: courseIds }
+        })
+        .populate('user');
+
+      const userScoreMap = new Map(
+        userScores.map(score => [
+          `${score.user._id.toString()}-${score.courseId.toString()}`,
+          score
+        ])
+      );
+
+      const courseMap = new Map(
+        myCourses.map(course => [course._id.toString(), course])
+      );
+
+      const usersWithCourseInfo = users.flatMap(user => {
+        return user.courses
+          .filter(course => courseIds.some(id => id.toString() === course.courseId.toString()))
+          .map(course => {
+            const courseInfo = courseMap.get(course.courseId.toString());
+            const userScore = userScoreMap.get(`${user._id.toString()}-${course.courseId.toString()}`);
+            
+            // delete user.courses;
+            
+            return {
+              ...user.toObject(),
+              _id: userScore?._id || `${user._id}-${course.courseId}`,
+              courseId: course.courseId,
+              courseName: courseInfo?.name || '',
+              score: userScore ? {
+                finalScore: userScore.finalScore || 0,
+                testCourseStatus: userScore.testCourseStatus || 0
+              } : {}
+            };
+          });
+      });
+
+      res.status(200).json({
+        success: true,
+        users: usersWithCourseInfo,
+        total: usersWithCourseInfo.length
+      });
+    } catch (error: any) {
+      console.error('Error in getUsersInMyCourses:', error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
 );
