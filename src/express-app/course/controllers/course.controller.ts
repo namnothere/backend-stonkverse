@@ -23,8 +23,12 @@ import axios from 'axios';
 import { LayoutModel } from '../../layout/models';
 import { TEST_COURSE_STATUS, userModel, userScoreModel } from '../../user/models';
 import { MESSAGES } from '../../shared/common';
+
 import { FinalTestSettingModel, IFinalTestSetting } from 'src/setting/entities/setting.entity';
 import { sendMail } from 'src/express-app/utils';
+
+import { userModel } from '../../user/models';
+
 
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -181,7 +185,10 @@ export const getSingleCourse = CatchAsyncErrors(
     try {
       const courseId = req.params.id;
 
-      const course = await CourseModel.findOne({ _id: courseId, status: 'APPROVED' })
+      const course = await CourseModel.findOne({
+        _id: courseId,
+        status: 'APPROVED',
+      })
         .select(
           '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
         )
@@ -218,7 +225,7 @@ export const getCoursesByKeySearch = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         name: { $regex: query, $options: 'i' },
-        status: 'APPROVED'
+        status: 'APPROVED',
       }).select('thumbnail name ratings');
 
       console.log(courses[0]);
@@ -716,7 +723,6 @@ export const addReview = CatchAsyncErrors(
         const updatedCourse =
           await CourseModel.findById(courseId).populate('reviews.user');
 
-
         res.status(200).json({
           success: true,
           reviews: updatedCourse?.reviews,
@@ -839,7 +845,6 @@ export const getUserCourses = CatchAsyncErrors(
       const courses = await CourseModel.find({
         _id: { $in: courseIds },
         status: 'APPROVED',
-
       })
         .sort({
           createdAt: -1,
@@ -1294,7 +1299,6 @@ export const uploadFinalTest = CatchAsyncErrors(async (req: Request, res: Respon
       return next(new ErrorHandler("Test duration is required", 400));
     }
 
-    // Chuyển đổi từ giao diện giờ-phút sang số phút
     const totalMinutes = convertToMinutes(settings.testDuration);
 
     console.log("Total duration calculation:", {
@@ -1395,12 +1399,12 @@ export const getCoursesByCategory = CatchAsyncErrors(
 
       const courses = await CourseModel.find({
         category: { $regex: new RegExp('^' + category + '$', 'i') },
-        status: "APPROVED"
+        status: 'APPROVED',
       }).select(
         '-courseData.videoUrl -courseData.suggestion -courseData.questions -courseData.links',
       );
 
-      console.log("test category by course:", courses)
+      console.log('test category by course:', courses);
 
       res.status(200).json({ success: true, courses, category });
     } catch (error: any) {
@@ -1632,6 +1636,7 @@ export const calculateFinalTestScore = CatchAsyncErrors(
     }
   },
 );
+
 
 export const getAllCoursesByUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -2248,6 +2253,396 @@ export const getUsersInMyCourses = CatchAsyncErrors(
 
             // delete user.courses;
 
+            return {
+              ...user.toObject(),
+              _id: userScore?._id || `${user._id}-${course.courseId}`,
+              courseId: course.courseId,
+              courseName: courseInfo?.name || '',
+              score: userScore ? {
+                finalScore: userScore.finalScore || 0,
+                testCourseStatus: userScore.testCourseStatus || 0
+              } : {}
+            };
+          });
+      });
+
+      res.status(200).json({
+        success: true,
+        users: usersWithCourseInfo,
+        total: usersWithCourseInfo.length
+      });
+    } catch (error: any) {
+      console.error('Error in getUsersInMyCourses:', error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+
+// interface ISubmitFinalTestBody {
+//   courseId: string;
+//   finalTestId: string;
+//   answers: {
+//     questionId: string;
+//     answer: string[];
+//   }[];
+// }
+
+// export const submitFinalTest = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+// <<<<<<< feature/SCRUM-109
+//       const { courseId, finalTestId, answers } = req.body as ISubmitFinalTestBody;
+//       const userId = req.user?._id;
+
+//       if (!userId) {
+//         return next(new ErrorHandler('User not found', 401));
+//       }
+
+//       // Tìm khóa học
+//       const course = await CourseModel.findById(courseId)
+//         .populate('courseData.quiz.answers.user');
+
+//       if (!course) {
+//         return next(new ErrorHandler('Course not found', 404));
+//       }
+
+//       // Tìm bài kiểm tra cuối cùng
+//       const finalTest = course.finalTest.find((test: any) => 
+//         test._id.toString() === finalTestId
+//       );
+
+//       if (!finalTest) {
+//         return next(new ErrorHandler('Final test not found', 404));
+//       }
+
+//       // Tính điểm cho bài kiểm tra này
+//       let totalScore = 0;
+//       let totalMaxScore = 0;
+//       let correctAnswersCount = 0;
+
+//       // Xử lý từng câu trả lời
+//       for (const answerObj of answers) {
+//         const { questionId, answer } = answerObj;
+        
+//         // Tìm câu hỏi
+//         const question = finalTest.tests.find((q: any) => 
+//           q._id.toString() === questionId
+//         );
+        
+//         if (!question) continue;
+
+//         // Tính điểm
+//         let score = 0;
+//         const maxScore = question.maxScore || 10;
+//         totalMaxScore += maxScore;
+        
+//         if (question.type === "single" || question.type === "fillBlank") {
+//           // Cho câu hỏi một lựa chọn hoặc điền vào chỗ trống
+//           if (answer.length === 1 && question.correctAnswer.includes(answer[0])) {
+//             score = maxScore;
+//             correctAnswersCount++;
+//           }
+//         } else if (question.type === "multiple") {
+//           // Cho câu hỏi nhiều lựa chọn
+//           const isFullyCorrect = 
+//             question.correctAnswer.length === answer.length &&
+//             question.correctAnswer.every((val: string) => answer.includes(val)) &&
+//             answer.every((val: string) => question.correctAnswer.includes(val));
+            
+//           if (isFullyCorrect) {
+//             score = maxScore;
+//             correctAnswersCount++;
+//           } else {
+//             // Điểm một phần cho câu trả lời đúng một phần
+//             const correctCount = answer.filter((ans: string) => 
+//               question.correctAnswer.includes(ans)).length;
+            
+//             // Trừ điểm cho các lựa chọn sai
+//             const incorrectCount = answer.filter((ans: string) => 
+//               !question.correctAnswer.includes(ans)).length;
+            
+//             // Tính điểm một phần
+//             score = Math.max(0, 
+//               (correctCount - incorrectCount) / 
+//               question.correctAnswer.length * maxScore
+//             );
+            
+//             // Đếm là đúng nếu đạt trên 50% điểm
+//             if (score >= maxScore / 2) {
+//               correctAnswersCount++;
+//             }
+//           }
+//         }
+        
+//         totalScore += score;
+        
+//         try {
+//           const answerData = {
+//             user: userId,
+//             answer: answer,
+//             score: score,
+//             createdAt: new Date()
+//           };
+
+//           await CourseModel.updateOne(
+//             { 
+//               _id: courseId, 
+//               "finalTest._id": finalTestId,
+//               "finalTest.tests._id": questionId 
+//             },
+//             { 
+//               $push: { 
+//                 "finalTest.$[ft].tests.$[q].answers": answerData
+//               } 
+//             },
+//             { 
+//               arrayFilters: [
+//                 { "ft._id": finalTestId },
+//                 { "q._id": questionId }
+//               ] 
+//             }
+//           );
+//         } catch (err) {
+//           console.error("Error saving answer:", err);
+//         }
+//       }
+
+//       // Tính phần trăm điểm bài test
+//       const finalTestPercentage = totalMaxScore > 0 ? 
+//         (totalScore / totalMaxScore) * 100 : 0;
+
+//       // --- Tính điểm tổng hợp cả khóa học ---
+      
+//       let totalQuizScore = 0;
+//       let totalQuizMaxScore = 0;
+      
+//       course.courseData.forEach((data: any) => {
+//         data.quiz.forEach((question: any) => {
+//           const userAnswers = question.answers.filter((ans: any) => 
+//             ans.user && ans.user._id.toString() === userId.toString()
+//           );
+          
+//           const latestAnswer = userAnswers.reduce((latest: any, current: any) => 
+//             latest && latest.createdAt > current.createdAt ? latest : current, 
+//             null
+//           );
+          
+//           const score = latestAnswer ? latestAnswer.score : 0;
+//           const maxScore = question.maxScore || 10;
+          
+//           totalQuizScore += score;
+//           totalQuizMaxScore += maxScore;
+//         });
+//       });
+      
+//       const quizPercentage = totalQuizMaxScore > 0 ? 
+//         (totalQuizScore / totalQuizMaxScore) * 100 : 0;
+      
+//       const quizWeight = course.quizWeight || 20;
+//       const finalTestWeight = course.finalTestWeight || 80;
+      
+//       const weightedFinalScore = 
+//         (quizPercentage * quizWeight / 100) + 
+//         (finalTestPercentage * finalTestWeight / 100);
+      
+//       const passingGrade = course.passingGrade || 50;
+//       const hasPassed = weightedFinalScore >= passingGrade;
+//       const testStatus = hasPassed ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED;
+      
+//       const existingScore = await userScoreModel.findOne({ user: userId, courseId });
+//       const isFirstTimePassing = !existingScore || existingScore.testCourseStatus !== TEST_COURSE_STATUS.PASSED;
+      
+//       await userScoreModel.deleteOne({ user: userId, courseId });
+      
+//       await userScoreModel.create({
+//         user: userId,
+//         courseId,
+//         finalScore: weightedFinalScore,
+//         testCourseStatus: testStatus,
+//       });
+      
+//       // await NotificationModel.create({
+//       //   user: userId,
+//       //   title: hasPassed ? 'Congratulations! Course Completed' : 'Course Test Result',
+//       //   message: hasPassed 
+//       //     ? `You have successfully passed the course "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%!`
+//       //     : `You have completed the tests for "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%. Try again to achieve a passing score of ${passingGrade}%.`,
+//       // });
+      
+//       if (hasPassed && isFirstTimePassing) {
+//         try {
+//           const user = await userModel.findById(userId);
+          
+//           if (user && user.email) {
+//             const mailData = {
+//               course: {
+//                 _id: course._id.toString().slice(0, 6),
+//                 name: course.name,
+//                 score: weightedFinalScore.toFixed(1),
+//                 passingGrade: passingGrade,
+//                 quizScore: quizPercentage.toFixed(1),
+//                 finalTestScore: finalTestPercentage.toFixed(1),
+//                 completionDate: new Date().toLocaleDateString('vi-VN', {
+//                   year: 'numeric',
+//                   month: 'long',
+//                   day: 'numeric',
+//                 }),
+//               },
+//               user: {
+//                 name: user.name || user.email.split('@')[0],
+//               }
+//             };
+            
+//             // Gửi email chúc mừng
+//             await sendMail({
+//               email: user.email,
+//               subject: `Congratulations on Completing "${course.name}"!`,
+//               template: 'course-completion.ejs',
+//               data: mailData,
+//             });
+//           }
+//         } catch (emailError) {
+//           console.error('Error sending completion email:', emailError);
+//         }
+//       }
+      
+//       res.status(200).json({
+//         success: true,
+//         data: {
+//           courseId: course._id,
+//           courseName: course.name,
+//           finalScore: weightedFinalScore,
+//           quizScore: quizPercentage,
+//           testScore: finalTestPercentage,
+//           correctAnswers: correctAnswersCount,
+//           totalQuestions: answers.length,
+//           weightedDetails: {
+//             quizContribution: quizWeight.toString(),
+//             testContribution: finalTestWeight.toString(),
+//           },
+//           passingGrade: passingGrade,
+//           passed: hasPassed,
+//           status: testStatus,
+//           isFirstTimePassing: isFirstTimePassing,
+//         }
+//       });
+// =======
+//       const userId = req.user?._id;
+//       const userScores = await userScoreModel
+//         .find({ user: userId })
+//         .populate('courseId');
+//       res.status(200).json({ success: true, userScores });
+// >>>>>>> master
+//     } catch (error: any) {
+//       console.error("Submit final test error:", error);
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   },
+// );
+
+export const getUsersByCourseId = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseId } = req.params;
+
+      const users = await userModel
+        .find({
+          'courses.courseId': courseId,
+        })
+        .select('name email avatar role createdAt');
+
+
+      const userScores = await userScoreModel.find({
+        courseId: courseId.toString()
+      }).populate('user');
+      
+      const userScoreMap = new Map(
+        userScores.map(score => [score.user._id.toString(), score])
+      );
+
+      const usersWithScores = users.map(user => {
+        const userScore = userScoreMap.get(user._id.toString());
+        return {
+          ...user.toObject(),
+          score: userScore ? {
+            finalScore: userScore.finalScore || 0,
+            testCourseStatus: userScore.testCourseStatus || 0
+          } : {}
+        };
+      });
+
+      res.status(200).json({
+        success: true,
+        users: usersWithScores,
+        total: users.length,
+      });
+    } catch (error: any) {
+      console.error('Error in getUsersByCourseId:', error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  },
+);
+
+export const getUsersInMyCourses = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id;
+      const userRole = req.user?.role;
+
+      if (!userId) {
+        return next(new ErrorHandler('User not found', 404));
+      }
+
+      const myCourses = userRole === 'ADMIN' 
+        ? await CourseModel.find({})
+        : await CourseModel.find({ createdBy: userId });
+      
+      if (!myCourses.length) {
+        return res.status(200).json({
+          success: true,
+          message: userRole === 'ADMIN' 
+            ? 'No courses found in the system'
+            : 'You have not created any courses yet',
+          users: [],
+          total: 0
+        });
+      }
+
+      const courseIds = myCourses.map(course => course._id);
+
+      const users = await userModel
+        .find({
+          'courses.courseId': { $in: courseIds }
+        })
+        .select('name email avatar role createdAt courses');
+
+      const userScores = await userScoreModel
+        .find({
+          courseId: { $in: courseIds }
+        })
+        .populate('user');
+
+      const userScoreMap = new Map(
+        userScores.map(score => [
+          `${score.user._id.toString()}-${score.courseId.toString()}`,
+          score
+        ])
+      );
+
+      const courseMap = new Map(
+        myCourses.map(course => [course._id.toString(), course])
+      );
+
+      const usersWithCourseInfo = users.flatMap(user => {
+        return user.courses
+          .filter(course => courseIds.some(id => id.toString() === course.courseId.toString()))
+          .map(course => {
+            const courseInfo = courseMap.get(course.courseId.toString());
+            const userScore = userScoreMap.get(`${user._id.toString()}-${course.courseId.toString()}`);
+            
+            // delete user.courses;
+            
             return {
               ...user.toObject(),
               _id: userScore?._id || `${user._id}-${course.courseId}`,
