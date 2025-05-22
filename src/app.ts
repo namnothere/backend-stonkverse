@@ -51,12 +51,12 @@ app.use((req, res, next) => {
 });
 
 // Rate limit
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-});
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+//   standardHeaders: 'draft-7',
+//   legacyHeaders: false,
+// });
 
 app.use(limiter);
 app.use(ErrorMiddleware);
