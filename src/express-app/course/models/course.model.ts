@@ -120,7 +120,7 @@ export interface ICourse extends Document {
   id: ObjectId;
   name: string;
   description?: string;
-  category: string;
+  category?: string;
   price: number;
   estimatedPrice?: number;
   thumbnail: {
