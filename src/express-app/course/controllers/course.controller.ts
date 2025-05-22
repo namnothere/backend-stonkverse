@@ -1,3 +1,4 @@
+import { title } from 'process';
 import cloudinary from 'cloudinary';
 import { CatchAsyncErrors } from '../../middleware/catchAsyncErrors';
 import { NextFunction, Request, Response } from 'express';
@@ -7,19 +8,27 @@ import {
   COURSE_DATA_STATUS,
   COURSE_STATUS,
   CourseModel,
+  IAnswerFinalTest,
   IAnswerQuiz,
   ICourse,
   ICourseData,
+  IFinalTest,
   IQuestionQuiz,
+  ITitleFinalTest,
 } from '../models';
 import { redis } from '../../utils/redis';
 import mongoose from 'mongoose';
 import { NotificationModel } from '../../models';
 import axios from 'axios';
 import { LayoutModel } from '../../layout/models';
-import { TEST_COURSE_STATUS, userScoreModel } from '../../user/models';
+import { TEST_COURSE_STATUS, userModel, userScoreModel } from '../../user/models';
 import { MESSAGES } from '../../shared/common';
+
+import { FinalTestSettingModel, IFinalTestSetting } from 'src/setting/entities/setting.entity';
+import { sendMail } from 'src/express-app/utils';
+
 import { userModel } from '../../user/models';
+
 
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -188,7 +197,6 @@ export const getSingleCourse = CatchAsyncErrors(
       if (!course) {
         res.status(404).json({ success: false, message: 'Course not found' });
       }
-
       res.status(200).json({ success: true, course });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -262,14 +270,24 @@ export const getCourseByUser = CatchAsyncErrors(
           new ErrorHandler('You are not eligible to access this course', 403),
         );
       }
-
-      const course = await CourseModel.findById(courseId).populate(
-        'courseData.questions.user courseData.questions.questionReplies.user',
-      );
+      const course = await CourseModel.findById(courseId)
+        .populate([
+          {
+            path: 'courseData.questions.user courseData.questions.questionReplies.user',
+          },
+          {
+            path: 'finalTest.settings',
+          },
+        ]);
 
       const content = course?.courseData;
+      const finalTest = course?.finalTest || [];
 
-      res.status(200).json({ success: true, content });
+      res.status(200).json({
+        success: true,
+        content,
+        finalTest
+      });
     } catch (error: any) {
       return new ErrorHandler(error.message, 500);
     }
@@ -495,6 +513,119 @@ export const addAnswerQuiz = CatchAsyncErrors(
   },
 );
 
+interface IAddAnswerFinalTest {
+  courseId: string;
+  finalTestId: string;
+  answers: {
+    questionId: string;
+    answer: string[];
+  }[];
+}
+
+export const addAnswerFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseId, finalTestId, answers } = req.body as IAddAnswerFinalTest;
+
+      // Validate courseId
+      if (!mongoose.Types.ObjectId.isValid(courseId)) {
+        return next(new ErrorHandler('Invalid course ID', 400));
+      }
+
+      // Find the course
+      const course = await CourseModel.findById(courseId);
+      if (!course) {
+        return next(new ErrorHandler('Course not found', 404));
+      }
+
+      // Validate finalTestId
+      if (!mongoose.Types.ObjectId.isValid(finalTestId)) {
+        return next(new ErrorHandler('Invalid final test ID', 400));
+      }
+
+      // Find the final test
+      const finalTest = course.finalTest.find((test: any) =>
+        test._id.equals(finalTestId)
+      );
+
+      if (!finalTest) {
+        return next(new ErrorHandler('Final test not found', 404));
+      }
+
+      // Process each answer
+      let totalScore = 0;
+      const detailedScores: { [key: string]: number } = {};
+
+      answers.forEach((answerObj) => {
+        const { questionId, answer } = answerObj;
+        
+        // Find the question in the final test
+        const question = finalTest.tests.find((q: any) => q._id.equals(questionId));
+        
+        if (!question) {
+          return;
+        }
+
+        // Calculate score based on question type and correctness
+        let score = 0;
+        
+        if (question.type === "single" || question.type === "fillBlank") {
+          // For single choice or fill in blank questions
+          score = question.correctAnswer.includes(answer[0]) ? question.maxScore : 0;
+        } else if (question.type === "multiple") {
+          // For multiple choice questions
+          const correctAll = 
+            question.correctAnswer.length === answer.length &&
+            question.correctAnswer.every((val: string) => answer.includes(val)) &&
+            answer.every((val: string) => question.correctAnswer.includes(val));
+            
+          if (correctAll) {
+            score = question.maxScore;
+          } else {
+            // Calculate partial score for partially correct answers
+            const correctCount = answer.filter((ans: string) => 
+              question.correctAnswer.includes(ans)).length;
+            
+            // Deduct points for incorrect selections
+            const incorrectCount = answer.filter((ans: string) => 
+              !question.correctAnswer.includes(ans)).length;
+            
+            // Calculate score based on correct - incorrect (min 0)
+            const partialScore = Math.max(0, 
+              (correctCount - incorrectCount) / 
+              question.correctAnswer.length * question.maxScore
+            );
+            
+            score = partialScore;
+          }
+        }
+        
+        totalScore += score;
+        detailedScores[questionId] = score;
+
+        // Save the answer
+        question.answers.push({
+          user: req.user?._id,
+          answer: answer,
+          score: score
+        } as any);
+      });
+
+      // Save the updated course
+      await course.save();
+
+      // Return the result
+      res.status(200).json({ 
+        success: true, 
+        totalScore, 
+        detailedScores 
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
 export const getAnswersQuiz = async (
   req: Request,
   res: Response,
@@ -677,6 +808,34 @@ export const getAllCoursesAdmin = CatchAsyncErrors(
       return next(new ErrorHandler(error.message, 400));
     }
   },
+);
+
+export const getAllCoursesFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userid = req.user?._id;
+
+      if (!userid) {
+        return next(new ErrorHandler('User not authenticated', 401));
+      }
+      console.log("userid test:", userid)
+
+      const courses = await CourseModel.find({
+        createdBy: userid,
+      })
+        .sort({
+          createdAt: -1,
+        })
+
+      console.log("course test:", courses)
+      res.status(200).json({
+        success: true,
+        courses
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
 );
 
 export const getUserCourses = CatchAsyncErrors(
@@ -959,18 +1118,18 @@ export const approveCourse = CatchAsyncErrors(
   async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
+      console.log("test courseid:", courseId)
 
-      const course = await CourseModel.findById(courseId);
-
-      // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+      const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
       if (!course) {
         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
       }
 
       await NotificationModel.create({
-        user: course.createdBy,
-        title: 'Approved Course',
-        message: `Your course ${course.name} has been approved`,
+        title: 'Course Approved',
+        message: `Your course "${course.name}" has been approved`,
+        userId: course.createdBy,
+        status: 'unread'
       });
 
       const updatedCourse = await CourseModel.findByIdAndUpdate(
@@ -984,11 +1143,14 @@ export const approveCourse = CatchAsyncErrors(
     }
   },
 );
+
 export const rejectCourse = CatchAsyncErrors(
   async (req: Request, res: Response) => {
     try {
       const courseId = req.params.id;
-      const course = await CourseModel.findById(courseId);
+
+      const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+
       if (!course) {
         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
       }
@@ -999,9 +1161,10 @@ export const rejectCourse = CatchAsyncErrors(
         { new: true },
       );
       await NotificationModel.create({
-        user: course.createdBy,
-        title: 'Rejected Course',
-        message: `Your course ${course.name} has been rejected`,
+        title: 'Course Rejected',
+        message: `Your course "${course.name}" has been rejected`,
+        userId: course.createdBy,
+        status: 'unread'
       });
       res.status(200).json(updatedCourse);
     } catch (error: any) {
@@ -1009,144 +1172,200 @@ export const rejectCourse = CatchAsyncErrors(
     }
   },
 );
-export const approveCourseFinalTest = CatchAsyncErrors(
-  async (req: Request, res: Response) => {
-    try {
-      const courseId = req.params.id;
-      const finalTestId = req.params.finalTestId;
 
-      const course = await CourseModel.findById(courseId);
+// export const approveCourseFinalTest = CatchAsyncErrors(
+//   async (req: Request, res: Response) => {
+//     try {
+//       const courseId = req.params.id;
+//       const finalTestId = req.params.finalTestId;
 
-      // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
-      if (!course) {
-        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
-      }
+//       const course = await CourseModel.findById(courseId);
 
-      const finalTest = course.courseData.find((item) => item.isFinalTest);
-      if (!finalTest) {
-        return new ErrorHandler(`Final test not found`, 404);
-      }
+//       // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+//       if (!course) {
+//         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+//       }
 
-      // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
-      const updatedCourse = await CourseModel.findByIdAndUpdate(
-        courseId,
-        {
-          $set: { 'courseData.$[finalTest].status': COURSE_STATUS.APPROVED },
-        },
-        {
-          arrayFilters: [
-            { 'finalTest._id': finalTestId, 'finalTest.isFinalTest': true },
-          ],
-          new: true,
-        },
-      );
+//       const finalTest = course.courseData.find((item) => item.isFinalTest);
+//       if (!finalTest) {
+//         return new ErrorHandler(`Final test not found`, 404);
+//       }
 
-      await NotificationModel.create({
-        user: course.createdBy,
-        title: 'Approved Final Test',
-        message: `Your Final Test in course ${course.name} has been approved`,
+//       // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+//       const updatedCourse = await CourseModel.findByIdAndUpdate(
+//         courseId,
+//         {
+//           $set: { 'courseData.$[finalTest].status': COURSE_STATUS.APPROVED },
+//         },
+//         {
+//           arrayFilters: [
+//             { 'finalTest._id': finalTestId, 'finalTest.isFinalTest': true },
+//           ],
+//           new: true,
+//         },
+//       );
+
+//       await NotificationModel.create({
+//         user: course.createdBy,
+//         title: 'Approved Final Test',
+//         message: `Your Final Test in course ${course.name} has been approved`,
+//       });
+
+//       res.status(200).json(updatedCourse);
+//     } catch (error: any) {
+//       return new ErrorHandler(error.message, 500);
+//     }
+//   },
+// );
+
+// export const rejectCourseFinalTest = CatchAsyncErrors(
+//   async (req: Request, res: Response) => {
+//     try {
+//       const courseId = req.params.id;
+//       const finalTestId = req.params.finalTestId;
+
+//       const course = await CourseModel.findById(courseId);
+
+//       // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
+//       if (!course) {
+//         return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
+//       }
+
+//       const finalTest = course.courseData.find((item) => item.isFinalTest);
+//       if (!finalTest) {
+//         return new ErrorHandler(`Final test not found`, 404);
+//       }
+
+//       // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
+//       const updatedCourse = await CourseModel.findByIdAndUpdate(
+//         courseId,
+//         {
+//           $set: { 'courseData.$[finalTest].status': COURSE_STATUS.REJECTED },
+//         },
+//         {
+//           arrayFilters: [
+//             { 'finalTest._id': finalTestId, 'finalTest.isFinalTest': true },
+//           ],
+//           new: true,
+//         },
+//       );
+
+//       await NotificationModel.create({
+//         user: course.createdBy,
+//         title: 'Rejected Final Test',
+//         message: `Your Final Test in course ${course.name} has been rejected`,
+//       });
+
+//       res.status(200).json(updatedCourse);
+//     } catch (error: any) {
+//       return new ErrorHandler(error.message, 500);
+//     }
+//   },
+// );
+
+interface TimeDuration {
+  hours?: number;
+  minutes?: number;
+}
+function convertToMinutes(duration: TimeDuration): number {
+  return (duration.hours || 0) * 60 + (duration.minutes || 0);
+}
+
+export const uploadFinalTest = CatchAsyncErrors(async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+    const { finalTest } = req.body;
+
+    console.log("finalTest structure:", JSON.stringify(finalTest, null, 2));
+    console.log("finalTest.tests:", JSON.stringify(finalTest.tests, null, 2));
+
+    const courseId = req.params.id;
+
+    const course = await CourseModel.findById(courseId);
+    if (!course) {
+      return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 404));
+    }
+    if (course.status !== 'APPROVED') {
+      return next(new ErrorHandler(MESSAGES.COURSE_NOT_APPROVED, 403));
+    }
+    if (course.finalTest && course.finalTest.length > 0) {
+      return next(new ErrorHandler(MESSAGES.FINAL_TEST_EXISTS, 400));
+    }
+
+    const settings = finalTest.settings;
+
+    if (!settings || !settings.testDuration) {
+      return next(new ErrorHandler("Test duration is required", 400));
+    }
+
+    const totalMinutes = convertToMinutes(settings.testDuration);
+
+    console.log("Total duration calculation:", {
+      hours: settings.testDuration.hours || 0,
+      minutes: settings.testDuration.minutes || 0,
+      totalMinutes: totalMinutes
+    });
+
+    const settingsPayload = {
+      testDuration: totalMinutes,
+      numberOfQuestions: settings.numberOfQuestions,
+      pageLayout: settings.pageLayout,
+      gradingDisplay: settings.gradingDisplay,
+      enableProctoring: settings.enableProctoring,
+      displaySettings: settings.displaySettings,
+      instructionsMessage: settings.instructionsMessage,
+      completionMessage: settings.completionMessage,
+      course: courseId,
+    };
+
+    const savedSettings = await FinalTestSettingModel.create(settingsPayload);
+
+    const finalTestData = {
+      title: finalTest.title,
+      description: finalTest.description,
+      score: finalTest.score || 0,
+      settings: savedSettings._id,
+      tests: Array.isArray(finalTest.tests) ? finalTest.tests.map((test: any) => ({
+        title: test.title,
+        type: test.type,
+        correctAnswer: Array.isArray(test.correctAnswer) ? test.correctAnswer : [],
+        mockAnswer: Array.isArray(test.mockAnswer) ? test.mockAnswer : [],
+        answers: Array.isArray(test.answers) ? test.answers : [],
+        maxScore: typeof test.maxScore === 'number' ? test.maxScore : 10,
+        imageUrl: test.imageUrl || ""
+      })) : []
+    };
+
+    await CourseModel.findByIdAndUpdate(
+      courseId,
+      {
+        $push: { finalTest: finalTestData },
+        $set: {
+          isFinalTest: true,
+          quizWeight: settings.quizWeight || 20,
+          finalTestWeight: settings.finalTestWeight || 80,
+          passingGrade: settings.passingGrade || 50
+        }
+      },
+      { new: true }
+    );
+
+    const populatedCourse = await CourseModel.findById(courseId)
+      .populate({
+        path: 'finalTest.settings'
       });
 
-      res.status(200).json(updatedCourse);
-    } catch (error: any) {
-      return new ErrorHandler(error.message, 500);
-    }
-  },
-);
-
-export const rejectCourseFinalTest = CatchAsyncErrors(
-  async (req: Request, res: Response) => {
-    try {
-      const courseId = req.params.id;
-      const finalTestId = req.params.finalTestId;
-
-      const course = await CourseModel.findById(courseId);
-
-      // const course = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.APPROVED }, { new: true });
-      if (!course) {
-        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
-      }
-
-      const finalTest = course.courseData.find((item) => item.isFinalTest);
-      if (!finalTest) {
-        return new ErrorHandler(`Final test not found`, 404);
-      }
-
-      // const updatedCourse = await CourseModel.findByIdAndUpdate(courseId, { status: COURSE_STATUS.REJECTED }, { new: true });
-      const updatedCourse = await CourseModel.findByIdAndUpdate(
-        courseId,
-        {
-          $set: { 'courseData.$[finalTest].status': COURSE_STATUS.REJECTED },
-        },
-        {
-          arrayFilters: [
-            { 'finalTest._id': finalTestId, 'finalTest.isFinalTest': true },
-          ],
-          new: true,
-        },
-      );
-
-      await NotificationModel.create({
-        user: course.createdBy,
-        title: 'Rejected Final Test',
-        message: `Your Final Test in course ${course.name} has been rejected`,
-      });
-
-      res.status(200).json(updatedCourse);
-    } catch (error: any) {
-      return new ErrorHandler(error.message, 500);
-    }
-  },
-);
-
-export const uploadFinalTest = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { data, courseId } = req.body;
-
-      const course = await CourseModel.findById(courseId);
-
-      if (!course) {
-        return new ErrorHandler(`Course with ID ${courseId} not found`, 404);
-      }
-
-      if (course.status !== 'APPROVED') {
-        return next(
-          new ErrorHandler(
-            'Course must be approved before uploading final test',
-            403,
-          ),
-        );
-      }
-
-      const isExistingFinalTest = course.courseData.find(
-        (item) => item.isFinalTest,
-      );
-
-      if (isExistingFinalTest) {
-        return new ErrorHandler(`Final test already exists`, 400);
-      }
-
-      data.isFinalTest = true;
-      const updatedCourse = await CourseModel.findByIdAndUpdate(
-        courseId,
-        {
-          $push: {
-            courseData: {
-              $each: [data],
-              $position: 0,
-            },
-          },
-        },
-        { new: true },
-      );
-
-      res.status(201).json({ success: true, updatedCourse });
-    } catch (error: any) {
-      next(new ErrorHandler(error.message, error.status || 500));
-    }
-  },
-);
+    res.status(201).json({
+      success: true,
+      message: "Final test uploaded successfully",
+      course: populatedCourse,
+    });
+  } catch (error: any) {
+    console.error("Error detail:", error);
+    next(new ErrorHandler(error.message || "Failed to upload final test", 500));
+  }
+});
 
 export const getPendingFinalTest = CatchAsyncErrors(
   async (req: Request, res: Response) => {
@@ -1200,52 +1419,100 @@ const getLatestAnswer = (
 ): IAnswerQuiz | undefined => {
   return answers
     .filter((answer) => answer.user?._id?.toString() === userId)
-    .reduce<
-      IAnswerQuiz | undefined
-    >((latest, current) => (latest && latest.createdAt > current.createdAt ? latest : current), undefined);
+    .reduce<IAnswerQuiz | undefined>(
+      (latest, current) => (latest && latest.createdAt > current.createdAt ? latest : current),
+      undefined
+    );
 };
 
+const getLatestFinalTestAnswer = (
+  answers: IAnswerFinalTest[],
+  userId: string,
+): IAnswerFinalTest | undefined => {
+  return answers
+    .filter((answer) => answer.user?._id?.toString() === userId)
+    .reduce<IAnswerFinalTest | undefined>(
+      (latest, current) => (latest && latest.createdAt > current.createdAt ? latest : current),
+      undefined
+    );
+};
+interface QuizScoreDetail {
+  title: string;
+  score: number;
+  maxScore: number;
+  type: string;
+}
+
 const calculateCourseScores = (course: ICourse, userId: string) => {
-  let finalTestScore = 0;
-  let finalTestMaxScore = 0;
-
-  let totalScore = 0;
-  let totalMaxScore = 0;
-  const regularTestScores: number[] = [];
-
-  const quizScores = course.courseData.flatMap((data: ICourseData) => {
-    let isFinalTestQuestions = false;
-    if (data.isFinalTest) isFinalTestQuestions = true;
-    return data.quiz.map((question: IQuestionQuiz) => {
+  // Quiz scores calculation
+  let totalQuizScore = 0;
+  let totalQuizMaxScore = 0;
+  const quizScoresDetails: QuizScoreDetail[] = [];
+  
+  // Process regular quiz scores from courseData
+  course.courseData.forEach((data: ICourseData) => {
+    data.quiz.forEach((question: IQuestionQuiz) => {
       const latestAnswer = getLatestAnswer(question.answers, userId);
       const score = latestAnswer ? latestAnswer.score : 0;
       const maxScore = question.maxScore;
-
-      if (isFinalTestQuestions) {
-        finalTestScore = score;
-        finalTestMaxScore = maxScore;
-      } else {
-        regularTestScores.push(score / maxScore); // Store percentage
-      }
-
-      totalScore += score;
-      totalMaxScore += maxScore;
-
-      return { title: question.title || '', score };
+      
+      totalQuizScore += score;
+      totalQuizMaxScore += maxScore;
+      
+      quizScoresDetails.push({ 
+        title: question.title || '', 
+        score,
+        maxScore,
+        type: 'quiz'
+      });
     });
   });
-
-  const avgRegularTestScore =
-    regularTestScores.length > 0
-      ? regularTestScores.reduce((sum, val) => sum + val, 0) /
-        regularTestScores.length
-      : 0;
-
-  const weightedFinalScore =
-    avgRegularTestScore * 0.2 * 100 +
-    (finalTestScore / finalTestMaxScore) * 0.8 * 100;
-
-  return { totalScore: weightedFinalScore, totalMaxScore: 100, quizScores };
+  
+  // Calculate quiz percentage
+  const quizPercentage = totalQuizMaxScore > 0 ? (totalQuizScore / totalQuizMaxScore) * 100 : 0;
+  
+  // Final test scores calculation
+  let totalFinalScore = 0;
+  let totalFinalMaxScore = 0;
+  
+  // Process final test scores from the finalTest array
+  if (course.finalTest && course.finalTest.length > 0) {
+    course.finalTest.forEach((finalTest: IFinalTest) => {
+      finalTest.tests.forEach((test: ITitleFinalTest) => {
+        const latestAnswer = getLatestFinalTestAnswer(test.answers, userId);
+        const score = latestAnswer ? latestAnswer.score : 0;
+        const maxScore = test.maxScore;
+        
+        totalFinalScore += score;
+        totalFinalMaxScore += maxScore;
+        
+        quizScoresDetails.push({ 
+          title: test.title || finalTest.title || '',
+          score,
+          maxScore,
+          type: 'finalTest'
+        });
+      });
+    });
+  }
+  
+  // Calculate final test percentage
+  const finalTestPercentage = totalFinalMaxScore > 0 ? (totalFinalScore / totalFinalMaxScore) * 100 : 0;
+  
+  // Use course-defined weights instead of hardcoded values
+  const quizWeight = course.quizWeight || 20;
+  const finalTestWeight = course.finalTestWeight || 80;
+  
+  // Calculate weighted final score
+  const weightedFinalScore = (quizPercentage * quizWeight / 100) + (finalTestPercentage * finalTestWeight / 100);
+  
+  return { 
+    totalScore: weightedFinalScore, 
+    totalMaxScore: 100,
+    quizScoresDetails,
+    quizPercentage,
+    finalTestPercentage
+  };
 };
 
 export const calculateFinalTestScore = CatchAsyncErrors(
@@ -1253,51 +1520,116 @@ export const calculateFinalTestScore = CatchAsyncErrors(
     try {
       const { courseId } = req.params;
       const userId = req.user?._id;
-      const course = await CourseModel.findById(courseId).populate(
-        'courseData.quiz.answers.user',
-      );
-
+      
+      // Populate both courseData.quiz.answers.user AND finalTest.tests.answers.user
+      const course = await CourseModel.findById(courseId)
+        .populate('courseData.quiz.answers.user')
+        .populate('finalTest.tests.answers.user');
+      
       if (!course) {
         return res
           .status(404)
           .json({ success: false, message: 'Course not found' });
       }
-
+      
       if (!userId) {
         return res
           .status(401)
           .json({ success: false, message: 'Unauthorized' });
       }
-
-      const { totalScore, totalMaxScore, quizScores } = calculateCourseScores(
+      
+      const user = await userModel.findById(userId);
+      
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: 'User not found' });
+      }
+      
+      const { totalScore, totalMaxScore, quizScoresDetails, quizPercentage, finalTestPercentage } = calculateCourseScores(
         course,
-        userId,
+        userId.toString(),
       );
-
-      const completionRate =
-        totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
-
-      // update userScore
+      
+      // Use course-defined passing grade instead of hardcoded value
+      const passingGrade = course.passingGrade || 50;
+      
+      // Determine if user passed or failed
+      const hasPassed = totalScore >= passingGrade;
+      const testStatus = hasPassed ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED;
+      
+      // Find if there's an existing score to determine if this is first time passing
+      const existingScore = await userScoreModel.findOne({ user: userId, courseId });
+      const isFirstTimePassing = !existingScore || existingScore.testCourseStatus !== TEST_COURSE_STATUS.PASSED;
+      
+      // Update userScore
       await userScoreModel.deleteOne({ user: userId, courseId });
-
+      
       await userScoreModel.create({
         user: userId,
         courseId,
         finalScore: totalScore,
-        testCourseStatus:
-          completionRate >= 50
-            ? TEST_COURSE_STATUS.PASSED
-            : TEST_COURSE_STATUS.FAILED,
+        testCourseStatus: testStatus,
       });
-
+      
+      // Create notification for course completion
+      // await NotificationModel.create({
+      //   user: userId,
+      //   title: hasPassed ? 'Congratulations! Course Completed' : 'Course Test Result',
+      //   message: hasPassed 
+      //     ? `You have successfully passed the course "${course.name}" with a score of ${totalScore.toFixed(1)}%!`
+      //     : `You have completed the tests for "${course.name}" with a score of ${totalScore.toFixed(1)}%. Try again to achieve a passing score of ${passingGrade}%.`,
+      // });
+      
+      // If user passed and it's their first time passing, send email
+      if (hasPassed && isFirstTimePassing) {
+        try {
+          // Email template data
+          const mailData = {
+            course: {
+              _id: course._id.toString().slice(0, 6),
+              name: course.name,
+              score: totalScore.toFixed(1),
+              passingGrade: passingGrade,
+              quizScore: quizPercentage.toFixed(1),
+              finalTestScore: finalTestPercentage.toFixed(1),
+              completionDate: new Date().toLocaleDateString('vi-VN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+            },
+            user: {
+              name: user.name || user.email.split('@')[0],
+            }
+          };
+          
+          // Send congratulatory email
+          await sendMail({
+            email: user.email,
+            subject: `Congratulations on Completing "${course.name}"!`,
+            template: 'course-completion.ejs',
+            data: mailData,
+          });
+          
+        } catch (error: any) {
+          console.error('Error sending course completion email:', error.message);
+        }
+      }
+      
       res.status(200).json({
         success: true,
         courseId: course._id,
         courseName: course.name,
         totalScore,
         totalMaxScore,
-        completionRate,
-        quizScores,
+        quizPercentage,
+        finalTestPercentage,
+        completionRate: totalScore, 
+        quizScoresDetails,
+        passingGrade: course.passingGrade,
+        status: testStatus,
+        passed: hasPassed,
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -1305,34 +1637,909 @@ export const calculateFinalTestScore = CatchAsyncErrors(
   },
 );
 
-export const getUserScores = CatchAsyncErrors(
+
+export const getAllCoursesByUser = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId } = req.params;
-      // const userId = req.user?._id ;
-      const userScores = await userScoreModel
-        .find({ user: userId })
-        .populate('courseId');
-      res.status(200).json({ success: true, userScores });
+      const userid = req.user?._id;
+      // console.log("userid:",userid)
+      const courses = await CourseModel.find({
+        createdBy: userid,
+      })
+        .sort({
+          createdAt: -1,
+        })
+        .select('_id name purchased price estimatedPrice courseData thumbnail status createdAt');
+
+      res.status(200).json({ success: true, courses });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  },
+);
+
+function convertMinutesToTimeDuration(minutes: number): { hours: number, minutes: number } {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return { hours, minutes: remainingMinutes };
+}
+
+export const getFinalTests = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const courseId = req.params.id;
+
+      const courseExists = await CourseModel.exists({ _id: courseId });
+
+      if (!courseExists) {
+        return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 404));
+      }
+
+      const course = await CourseModel.findById(courseId)
+        .select('_id name finalTest')
+        .populate({
+          path: 'finalTest',
+          select: '_id title description tests score',
+          populate: {
+            path: 'settings',
+            model: 'FinalTestSetting',
+            select: 'testDuration numberOfQuestions instructionsMessage completionMessage'
+          }
+        });
+
+      if (!course) {
+        return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 404));
+      }
+
+      const finalTests = course.finalTest || [];
+
+      const transformedFinalTests = finalTests.map(test => {
+        const transformedTest = { ...test.toObject() };
+
+        if (transformedTest.settings && typeof transformedTest.settings === 'object'
+          && transformedTest.settings.testDuration !== undefined) {
+          // Chuyển đổi số phút thành định dạng giờ-phút
+          transformedTest.settings.testDuration = convertMinutesToTimeDuration(
+            transformedTest.settings.testDuration
+          );
+        }
+
+        return transformedTest;
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          _id: course._id,
+          name: course.name,
+          finalTests: transformedFinalTests
+        }
+      });
+
+    } catch (error: any) {
+      console.error("Error getting final tests:", error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  },
+);
+
+export const getFinalTestById = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const finalTestId = req.params.id;
+
+      const course = await CourseModel.findOne({ "finalTest._id": finalTestId })
+        .populate({
+          path: 'finalTest',
+          match: { _id: finalTestId },
+          select: '_id title description type imageUrl maxScore correctAnswer mockAnswer createdAt',
+          populate: [{
+            path: 'settings',
+            model: 'FinalTestSetting',
+            select: 'testDuration numberOfQuestions instructionsMessage completionMessage'
+          },
+          {
+            path: 'tests',
+            select: '_id title description type imageUrl maxScore correctAnswer mockAnswer'
+          }
+          ]
+        });
+
+      if (!course) {
+        return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+      }
+
+      const finalTest = course.finalTest.find(test => test._id.toString() === finalTestId);
+      if (!finalTest) {
+        return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+      }
+
+      const transformedFinalTest = finalTest.toObject();
+
+      if (transformedFinalTest.settings && typeof transformedFinalTest.settings === 'object'
+        && transformedFinalTest.settings.testDuration !== undefined) {
+        transformedFinalTest.settings.testDuration = convertMinutesToTimeDuration(
+          transformedFinalTest.settings.testDuration
+        );
+      }
+
+      console.log("id data:", finalTestId);
+      console.log("final data:", transformedFinalTest);
+
+      res.status(200).json({
+        success: true,
+        data: transformedFinalTest
+      });
+
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
   },
 );
 
-export const getMyUserScores = CatchAsyncErrors(
+export const editFinalTestById = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?._id;
-      const userScores = await userScoreModel
-        .find({ user: userId })
-        .populate('courseId');
-      res.status(200).json({ success: true, userScores });
+      const finalTestId = req.params.id;
+      const { finalTest } = req.body;
+
+      console.log("Editing finalTest with ID:", finalTestId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+      const course = await CourseModel.findOne({ "finalTest._id": finalTestId });
+
+      if (!course) {
+        return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+      }
+
+      const finalTestIndex = course.finalTest.findIndex(
+        test => test._id.toString() === finalTestId
+      );
+
+      if (finalTestIndex === -1) {
+        return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+      }
+
+      const currentFinalTest = course.finalTest[finalTestIndex];
+
+      if (finalTest.settings) {
+        const settings = finalTest.settings;
+
+        if (settings.testDuration) {
+          const totalMinutes = convertToMinutes(settings.testDuration);
+
+          const settingsPayload = {
+            testDuration: totalMinutes,
+            numberOfQuestions: settings.numberOfQuestions,
+            instructionsMessage: settings.instructionsMessage,
+            completionMessage: settings.completionMessage
+          };
+
+          if (currentFinalTest.settings && typeof currentFinalTest.settings === 'object' && currentFinalTest.settings._id) {
+            await FinalTestSettingModel.findByIdAndUpdate(
+              currentFinalTest.settings._id,
+              settingsPayload
+            );
+          } else {
+
+            const updateQuery = {};
+            updateQuery[`finalTest.${finalTestIndex}.settings`] = settingsPayload;
+
+            await CourseModel.updateOne(
+              { _id: course._id },
+              { $set: updateQuery }
+            );
+          }
+        }
+      }
+      const finalTestUpdateData = {};
+
+      if (finalTest.title !== undefined) {
+        finalTestUpdateData[`finalTest.${finalTestIndex}.title`] = finalTest.title;
+      }
+
+      if (finalTest.description !== undefined) {
+        finalTestUpdateData[`finalTest.${finalTestIndex}.description`] = finalTest.description;
+      }
+
+      if (finalTest.score !== undefined) {
+        finalTestUpdateData[`finalTest.${finalTestIndex}.score`] = finalTest.score;
+      }
+
+      if (Array.isArray(finalTest.tests) && finalTest.tests.length > 0) {
+        const testsData = finalTest.tests.map((test: any) => ({
+          title: test.title,
+          type: test.type,
+          correctAnswer: Array.isArray(test.correctAnswer) ? test.correctAnswer : [],
+          mockAnswer: Array.isArray(test.mockAnswer) ? test.mockAnswer : [],
+          answers: Array.isArray(test.answers) ? test.answers : [],
+          maxScore: typeof test.maxScore === 'number' ? test.maxScore : 10,
+          imageUrl: test.imageUrl || "",
+          description: test.description || ""
+        }));
+
+        finalTestUpdateData[`finalTest.${finalTestIndex}.tests`] = testsData;
+      }
+
+      if (finalTest.settings) {
+        if (finalTest.settings.quizWeight !== undefined) {
+          finalTestUpdateData["quizWeight"] = finalTest.settings.quizWeight;
+        }
+
+        if (finalTest.settings.finalTestWeight !== undefined) {
+          finalTestUpdateData["finalTestWeight"] = finalTest.settings.finalTestWeight;
+        }
+
+        if (finalTest.settings.passingGrade !== undefined) {
+          finalTestUpdateData["passingGrade"] = finalTest.settings.passingGrade;
+        }
+      }
+
+      if (Object.keys(finalTestUpdateData).length > 0) {
+        await CourseModel.updateOne(
+          { _id: course._id },
+          { $set: finalTestUpdateData }
+        );
+      }
+
+      const updatedCourse = await CourseModel.findById(course._id)
+        .populate({
+          path: 'finalTest',
+          match: { _id: finalTestId },
+          populate: {
+            path: 'settings',
+            model: 'FinalTestSetting',
+            select: 'testDuration numberOfQuestions instructionsMessage completionMessage'
+          }
+        });
+
+      if (!updatedCourse) {
+        return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 404));
+      }
+
+      const updatedFinalTest = updatedCourse.finalTest.find(
+        test => test._id.toString() === finalTestId
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Final test updated successfully",
+        data: updatedFinalTest
+      });
+
+    } catch (error: any) {
+      console.error("Error updating finalTest:", error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+export const deleteFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const finalTestId = req.params.id;
+
+      const course = await CourseModel.findOne({ "finalTest._id": finalTestId });
+
+      if (!course) {
+        return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+      }
+
+      const finalTest = Array.isArray(course.finalTest)
+        ? course.finalTest.find((test) => test._id.toString() === finalTestId)
+        : course.finalTest;
+
+      if (finalTest && finalTest.settings) {
+        await FinalTestSettingModel.findByIdAndDelete(finalTest.settings);
+      }
+
+      const updateData = {
+        finalTestWeight: 0,
+        isFinalTest: false
+      }
+
+      if (Array.isArray(course.finalTest)) {
+        // If finalTest is an Array
+        await CourseModel.findByIdAndUpdate(
+          course._id,
+          {
+            $pull: { finalTest: { _id: finalTestId } },
+            $set: updateData
+          }
+        );
+      } else {
+        // If finalTest is an Object
+        await CourseModel.findByIdAndUpdate(
+          course._id,
+          {
+            $unset: { finalTest: "" },
+            $set: updateData
+          }
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        message: MESSAGES.FINAL_TEST_EDITED_SUCCESSFULLY
+      });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
   },
 );
+
+/**
+ * Submit an answer to a final test (for students)
+ */
+// export const submitFinalTestAnswer = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const finalTestId = req.params.id;
+//       const { answers, testIds } = req.body; // testIds maps to ITitleFinalTest._id
+//       const userId = req.user?._id;
+
+//       if (!userId) {
+//         return next(new ErrorHandler(MESSAGES.UNAUTHORIZED, 401));
+//       }
+
+//       // Find the course containing the final test
+//       const course = await CourseModel.findOne({ "finalTest._id": finalTestId });
+//       if (!course) {
+//         return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+//       }
+
+//       // Find the final test
+//       const finalTestIndex = course.finalTest.findIndex(
+//         test => test._id.toString() === finalTestId
+//       );
+
+//       if (finalTestIndex === -1) {
+//         return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+//       }
+
+//       const finalTest = course.finalTest[finalTestIndex];
+
+//       // Calculate score for each test question
+//       let totalScore = 0;
+//       let totalPoints = 0;
+
+//       // Process answers and calculate score
+//       if (finalTest.tests && Array.isArray(finalTest.tests) && testIds && Array.isArray(testIds)) {
+//         for (let i = 0; i < testIds.length; i++) {
+//           const testId = testIds[i];
+//           const userAnswer = answers[i];
+
+//           // Find the corresponding test question
+//           const testIndex = finalTest.tests.findIndex(
+//             test => test._id.toString() === testId
+//           );
+
+//           if (testIndex !== -1) {
+//             const test = finalTest.tests[testIndex];
+//             const maxScore = test.maxScore || 10;
+//             totalPoints += maxScore;
+
+//             if (userAnswer && test.correctAnswer) {
+//               // Handle different question types
+//               if (test.type === 'multiple') {
+//                 // For multiple choice, check if arrays match (regardless of order)
+//                 const userAnswerSet = new Set(Array.isArray(userAnswer) ? userAnswer : [userAnswer]);
+//                 const correctAnswerSet = new Set(test.correctAnswer);
+
+//                 if (userAnswerSet.size === correctAnswerSet.size && 
+//                     [...userAnswerSet].every(value => correctAnswerSet.has(value))) {
+//                   totalScore += maxScore;
+//                 }
+//               } else {
+//                 // For single choice, fillBlank, and image, direct comparison
+//                 if (userAnswer.toString() === test.correctAnswer.toString()) {
+//                   totalScore += maxScore;
+//                 }
+//               }
+
+//               // Add the user's answer to the test
+//               const answerData = {
+//                 user: userId,
+//                 answer: Array.isArray(userAnswer) ? userAnswer : [userAnswer],
+//                 score: maxScore, // Individual answer score
+//               };
+
+//               // Check if this user already has an answer for this test
+//               const existingAnswerIndex = test.answers?.findIndex(
+//                 answer => answer.user && answer.user.toString() === userId.toString()
+//               );
+
+//               if (existingAnswerIndex !== -1 && test.answers) {
+//                 test.answers[existingAnswerIndex] = answerData;
+//               } else {
+//                 if (!test.answers) {
+//                   test.answers = [];
+//                 }
+//                 test.answers.push(answerData);
+//               }
+//             }
+//           }
+//         }
+//       }
+
+//       // Calculate percentage score
+//       const finalScore = totalPoints > 0 ? Math.round((totalScore / totalPoints) * 100) : 0;
+
+//       // Update the final test score
+//       finalTest.score = finalScore;
+
+//       // Save the course with the updated final test
+//       await course.save();
+
+//       // Create notification for the student
+//       // await NotificationModel.create({
+//       //   title: 'Final Test Submitted',
+//       //   message: `You've successfully submitted your final test for the course "${course.name}"`,
+//       //   userId: userId,
+//       //   status: 'unread'
+//       // });
+
+//       res.status(200).json({
+//         success: true,
+//         message: "Final test submitted successfully",
+//         data: {
+//           score: finalScore,
+//           passed: finalScore >= course.passingGrade
+//         }
+//       });
+//     } catch (error: any) {
+//       return next(new ErrorHandler(error.message || "Failed to submit final test", 500));
+//     }
+//   }
+// );
+
+/**
+ * Get student's final test results
+ */
+// export const getStudentFinalTestResults = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//       const courseId = req.params.courseId;
+//       const userId = req.user?._id;
+
+//       if (!userId) {
+//         return next(new ErrorHandler(MESSAGES.UNAUTHORIZED, 401));
+//       }
+
+//       // Find the course
+//       const course = await CourseModel.findById(courseId).populate({
+//         path: 'finalTest',
+//         populate: [
+//           {
+//             path: 'settings',
+//             model: 'FinalTestSetting'
+//           },
+//           {
+//             path: 'tests',
+//             match: { 'answers.user': userId }, // Only get tests that the user has answered
+//             select: '_id title answers'
+//           }
+//         ]
+//       });
+
+//       if (!course) {
+//         return next(new ErrorHandler(MESSAGES.COURSE_NOT_FOUND, 404));
+//       }
+
+//       if (!course.finalTest || course.finalTest.length === 0) {
+//         return next(new ErrorHandler(MESSAGES.FINAL_TEST_NOT_FOUND, 404));
+//       }
+
+//       // Process the results for each final test
+//       const results = [];
+
+//       for (const finalTest of course.finalTest) {
+//         // Calculate the user's overall score in this final test
+//         let userTestsWithAnswers = 0;
+//         let userTotalScore = 0;
+
+//         if (finalTest.tests) {
+//           for (const test of finalTest.tests) {
+//             const userAnswer = test.answers?.find(
+//               answer => answer.user && answer.user.toString() === userId.toString()
+//             );
+
+//             if (userAnswer) {
+//               userTestsWithAnswers++;
+//               userTotalScore += userAnswer.score;
+//             }
+//           }
+//         }
+
+//         // Only add results if the user has answered some tests
+//         if (userTestsWithAnswers > 0) {
+//           const averageScore = Math.round(userTotalScore / userTestsWithAnswers);
+
+//           results.push({
+//             finalTestId: finalTest._id,
+//             title: finalTest.title,
+//             score: averageScore,
+//             passedTests: userTestsWithAnswers,
+//             totalTests: finalTest.tests?.length || 0,
+//             passed: averageScore >= course.passingGrade
+//           });
+//         }
+//       }
+
+//       res.status(200).json({
+//         success: true,
+//         data: {
+//           courseId: course._id,
+//           courseName: course.name,
+//           passingGrade: course.passingGrade,
+//           results
+//         }
+//       });
+//     } catch (error: any) {
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   }
+// );
+
+export const getCourseByInstructor = CatchAsyncErrors(
+  async (req: Request, res: Response) => {
+    try {
+      const courseId = req.params.id;
+      const course = await CourseModel.findById(courseId);
+
+      res.status(200).json(course);
+    } catch (error: any) {
+      return new ErrorHandler(error.message, 500);
+    }
+  },
+);
+
+export const getUsersInMyCourses = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?._id;
+      const userRole = req.user?.role;
+
+      if (!userId) {
+        return next(new ErrorHandler('User not found', 404));
+      }
+
+      const myCourses = userRole === 'ADMIN'
+        ? await CourseModel.find({})
+        : await CourseModel.find({ createdBy: userId });
+
+      if (!myCourses.length) {
+        return res.status(200).json({
+          success: true,
+          message: userRole === 'ADMIN'
+            ? 'No courses found in the system'
+            : 'You have not created any courses yet',
+          users: [],
+          total: 0
+        });
+      }
+
+      const courseIds = myCourses.map(course => course._id);
+
+      const users = await userModel
+        .find({
+          'courses.courseId': { $in: courseIds }
+        })
+        .select('name email avatar role createdAt courses');
+
+      const userScores = await userScoreModel
+        .find({
+          courseId: { $in: courseIds }
+        })
+        .populate('user');
+
+      const userScoreMap = new Map(
+        userScores.map(score => [
+          `${score.user._id.toString()}-${score.courseId.toString()}`,
+          score
+        ])
+      );
+
+      const courseMap = new Map(
+        myCourses.map(course => [course._id.toString(), course])
+      );
+
+      const usersWithCourseInfo = users.flatMap(user => {
+        return user.courses
+          .filter(course => courseIds.some(id => id.toString() === course.courseId.toString()))
+          .map(course => {
+            const courseInfo = courseMap.get(course.courseId.toString());
+            const userScore = userScoreMap.get(`${user._id.toString()}-${course.courseId.toString()}`);
+
+            // delete user.courses;
+
+            return {
+              ...user.toObject(),
+              _id: userScore?._id || `${user._id}-${course.courseId}`,
+              courseId: course.courseId,
+              courseName: courseInfo?.name || '',
+              score: userScore ? {
+                finalScore: userScore.finalScore || 0,
+                testCourseStatus: userScore.testCourseStatus || 0
+              } : {}
+            };
+          });
+      });
+
+      res.status(200).json({
+        success: true,
+        users: usersWithCourseInfo,
+        total: usersWithCourseInfo.length
+      });
+    } catch (error: any) {
+      console.error('Error in getUsersInMyCourses:', error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+
+// interface ISubmitFinalTestBody {
+//   courseId: string;
+//   finalTestId: string;
+//   answers: {
+//     questionId: string;
+//     answer: string[];
+//   }[];
+// }
+
+// export const submitFinalTest = CatchAsyncErrors(
+//   async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+// <<<<<<< feature/SCRUM-109
+//       const { courseId, finalTestId, answers } = req.body as ISubmitFinalTestBody;
+//       const userId = req.user?._id;
+
+//       if (!userId) {
+//         return next(new ErrorHandler('User not found', 401));
+//       }
+
+//       // Tìm khóa học
+//       const course = await CourseModel.findById(courseId)
+//         .populate('courseData.quiz.answers.user');
+
+//       if (!course) {
+//         return next(new ErrorHandler('Course not found', 404));
+//       }
+
+//       // Tìm bài kiểm tra cuối cùng
+//       const finalTest = course.finalTest.find((test: any) => 
+//         test._id.toString() === finalTestId
+//       );
+
+//       if (!finalTest) {
+//         return next(new ErrorHandler('Final test not found', 404));
+//       }
+
+//       // Tính điểm cho bài kiểm tra này
+//       let totalScore = 0;
+//       let totalMaxScore = 0;
+//       let correctAnswersCount = 0;
+
+//       // Xử lý từng câu trả lời
+//       for (const answerObj of answers) {
+//         const { questionId, answer } = answerObj;
+        
+//         // Tìm câu hỏi
+//         const question = finalTest.tests.find((q: any) => 
+//           q._id.toString() === questionId
+//         );
+        
+//         if (!question) continue;
+
+//         // Tính điểm
+//         let score = 0;
+//         const maxScore = question.maxScore || 10;
+//         totalMaxScore += maxScore;
+        
+//         if (question.type === "single" || question.type === "fillBlank") {
+//           // Cho câu hỏi một lựa chọn hoặc điền vào chỗ trống
+//           if (answer.length === 1 && question.correctAnswer.includes(answer[0])) {
+//             score = maxScore;
+//             correctAnswersCount++;
+//           }
+//         } else if (question.type === "multiple") {
+//           // Cho câu hỏi nhiều lựa chọn
+//           const isFullyCorrect = 
+//             question.correctAnswer.length === answer.length &&
+//             question.correctAnswer.every((val: string) => answer.includes(val)) &&
+//             answer.every((val: string) => question.correctAnswer.includes(val));
+            
+//           if (isFullyCorrect) {
+//             score = maxScore;
+//             correctAnswersCount++;
+//           } else {
+//             // Điểm một phần cho câu trả lời đúng một phần
+//             const correctCount = answer.filter((ans: string) => 
+//               question.correctAnswer.includes(ans)).length;
+            
+//             // Trừ điểm cho các lựa chọn sai
+//             const incorrectCount = answer.filter((ans: string) => 
+//               !question.correctAnswer.includes(ans)).length;
+            
+//             // Tính điểm một phần
+//             score = Math.max(0, 
+//               (correctCount - incorrectCount) / 
+//               question.correctAnswer.length * maxScore
+//             );
+            
+//             // Đếm là đúng nếu đạt trên 50% điểm
+//             if (score >= maxScore / 2) {
+//               correctAnswersCount++;
+//             }
+//           }
+//         }
+        
+//         totalScore += score;
+        
+//         try {
+//           const answerData = {
+//             user: userId,
+//             answer: answer,
+//             score: score,
+//             createdAt: new Date()
+//           };
+
+//           await CourseModel.updateOne(
+//             { 
+//               _id: courseId, 
+//               "finalTest._id": finalTestId,
+//               "finalTest.tests._id": questionId 
+//             },
+//             { 
+//               $push: { 
+//                 "finalTest.$[ft].tests.$[q].answers": answerData
+//               } 
+//             },
+//             { 
+//               arrayFilters: [
+//                 { "ft._id": finalTestId },
+//                 { "q._id": questionId }
+//               ] 
+//             }
+//           );
+//         } catch (err) {
+//           console.error("Error saving answer:", err);
+//         }
+//       }
+
+//       // Tính phần trăm điểm bài test
+//       const finalTestPercentage = totalMaxScore > 0 ? 
+//         (totalScore / totalMaxScore) * 100 : 0;
+
+//       // --- Tính điểm tổng hợp cả khóa học ---
+      
+//       let totalQuizScore = 0;
+//       let totalQuizMaxScore = 0;
+      
+//       course.courseData.forEach((data: any) => {
+//         data.quiz.forEach((question: any) => {
+//           const userAnswers = question.answers.filter((ans: any) => 
+//             ans.user && ans.user._id.toString() === userId.toString()
+//           );
+          
+//           const latestAnswer = userAnswers.reduce((latest: any, current: any) => 
+//             latest && latest.createdAt > current.createdAt ? latest : current, 
+//             null
+//           );
+          
+//           const score = latestAnswer ? latestAnswer.score : 0;
+//           const maxScore = question.maxScore || 10;
+          
+//           totalQuizScore += score;
+//           totalQuizMaxScore += maxScore;
+//         });
+//       });
+      
+//       const quizPercentage = totalQuizMaxScore > 0 ? 
+//         (totalQuizScore / totalQuizMaxScore) * 100 : 0;
+      
+//       const quizWeight = course.quizWeight || 20;
+//       const finalTestWeight = course.finalTestWeight || 80;
+      
+//       const weightedFinalScore = 
+//         (quizPercentage * quizWeight / 100) + 
+//         (finalTestPercentage * finalTestWeight / 100);
+      
+//       const passingGrade = course.passingGrade || 50;
+//       const hasPassed = weightedFinalScore >= passingGrade;
+//       const testStatus = hasPassed ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED;
+      
+//       const existingScore = await userScoreModel.findOne({ user: userId, courseId });
+//       const isFirstTimePassing = !existingScore || existingScore.testCourseStatus !== TEST_COURSE_STATUS.PASSED;
+      
+//       await userScoreModel.deleteOne({ user: userId, courseId });
+      
+//       await userScoreModel.create({
+//         user: userId,
+//         courseId,
+//         finalScore: weightedFinalScore,
+//         testCourseStatus: testStatus,
+//       });
+      
+//       // await NotificationModel.create({
+//       //   user: userId,
+//       //   title: hasPassed ? 'Congratulations! Course Completed' : 'Course Test Result',
+//       //   message: hasPassed 
+//       //     ? `You have successfully passed the course "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%!`
+//       //     : `You have completed the tests for "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%. Try again to achieve a passing score of ${passingGrade}%.`,
+//       // });
+      
+//       if (hasPassed && isFirstTimePassing) {
+//         try {
+//           const user = await userModel.findById(userId);
+          
+//           if (user && user.email) {
+//             const mailData = {
+//               course: {
+//                 _id: course._id.toString().slice(0, 6),
+//                 name: course.name,
+//                 score: weightedFinalScore.toFixed(1),
+//                 passingGrade: passingGrade,
+//                 quizScore: quizPercentage.toFixed(1),
+//                 finalTestScore: finalTestPercentage.toFixed(1),
+//                 completionDate: new Date().toLocaleDateString('vi-VN', {
+//                   year: 'numeric',
+//                   month: 'long',
+//                   day: 'numeric',
+//                 }),
+//               },
+//               user: {
+//                 name: user.name || user.email.split('@')[0],
+//               }
+//             };
+            
+//             // Gửi email chúc mừng
+//             await sendMail({
+//               email: user.email,
+//               subject: `Congratulations on Completing "${course.name}"!`,
+//               template: 'course-completion.ejs',
+//               data: mailData,
+//             });
+//           }
+//         } catch (emailError) {
+//           console.error('Error sending completion email:', emailError);
+//         }
+//       }
+      
+//       res.status(200).json({
+//         success: true,
+//         data: {
+//           courseId: course._id,
+//           courseName: course.name,
+//           finalScore: weightedFinalScore,
+//           quizScore: quizPercentage,
+//           testScore: finalTestPercentage,
+//           correctAnswers: correctAnswersCount,
+//           totalQuestions: answers.length,
+//           weightedDetails: {
+//             quizContribution: quizWeight.toString(),
+//             testContribution: finalTestWeight.toString(),
+//           },
+//           passingGrade: passingGrade,
+//           passed: hasPassed,
+//           status: testStatus,
+//           isFirstTimePassing: isFirstTimePassing,
+//         }
+//       });
+// =======
+//       const userId = req.user?._id;
+//       const userScores = await userScoreModel
+//         .find({ user: userId })
+//         .populate('courseId');
+//       res.status(200).json({ success: true, userScores });
+// >>>>>>> master
+//     } catch (error: any) {
+//       console.error("Submit final test error:", error);
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   },
+// );
 
 export const getUsersByCourseId = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -1456,6 +2663,260 @@ export const getUsersInMyCourses = CatchAsyncErrors(
       });
     } catch (error: any) {
       console.error('Error in getUsersInMyCourses:', error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+interface ISubmitFinalTestBody {
+  courseId: string;
+  finalTestId: string;
+  answers: {
+    questionId: string;
+    answer: string[];
+  }[];
+}
+
+export const submitFinalTest = CatchAsyncErrors(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { courseId, finalTestId, answers } = req.body as ISubmitFinalTestBody;
+      const userId = req.user?._id;
+
+      if (!userId) {
+        return next(new ErrorHandler('User not found', 401));
+      }
+
+      // Tìm khóa học
+      const course = await CourseModel.findById(courseId)
+        .populate('courseData.quiz.answers.user');
+
+      if (!course) {
+        return next(new ErrorHandler('Course not found', 404));
+      }
+
+      // Tìm bài kiểm tra cuối cùng
+      const finalTest = course.finalTest.find((test: any) => 
+        test._id.toString() === finalTestId
+      );
+
+      if (!finalTest) {
+        return next(new ErrorHandler('Final test not found', 404));
+      }
+
+      // Tính điểm cho bài kiểm tra này
+      let totalScore = 0;
+      let totalMaxScore = 0;
+      let correctAnswersCount = 0;
+
+      // Xử lý từng câu trả lời
+      for (const answerObj of answers) {
+        const { questionId, answer } = answerObj;
+        
+        // Tìm câu hỏi
+        const question = finalTest.tests.find((q: any) => 
+          q._id.toString() === questionId
+        );
+        
+        if (!question) continue;
+
+        // Tính điểm
+        let score = 0;
+        const maxScore = question.maxScore || 10;
+        totalMaxScore += maxScore;
+        
+        if (question.type === "single" || question.type === "fillBlank") {
+          // Cho câu hỏi một lựa chọn hoặc điền vào chỗ trống
+          if (answer.length === 1 && question.correctAnswer.includes(answer[0])) {
+            score = maxScore;
+            correctAnswersCount++;
+          }
+        } else if (question.type === "multiple") {
+          // Cho câu hỏi nhiều lựa chọn
+          const isFullyCorrect = 
+            question.correctAnswer.length === answer.length &&
+            question.correctAnswer.every((val: string) => answer.includes(val)) &&
+            answer.every((val: string) => question.correctAnswer.includes(val));
+            
+          if (isFullyCorrect) {
+            score = maxScore;
+            correctAnswersCount++;
+          } else {
+            // Điểm một phần cho câu trả lời đúng một phần
+            const correctCount = answer.filter((ans: string) => 
+              question.correctAnswer.includes(ans)).length;
+            
+            // Trừ điểm cho các lựa chọn sai
+            const incorrectCount = answer.filter((ans: string) => 
+              !question.correctAnswer.includes(ans)).length;
+            
+            // Tính điểm một phần
+            score = Math.max(0, 
+              (correctCount - incorrectCount) / 
+              question.correctAnswer.length * maxScore
+            );
+            
+            // Đếm là đúng nếu đạt trên 50% điểm
+            if (score >= maxScore / 2) {
+              correctAnswersCount++;
+            }
+          }
+        }
+        
+        totalScore += score;
+        
+        try {
+          const answerData = {
+            user: userId,
+            answer: answer,
+            score: score,
+            createdAt: new Date()
+          };
+
+          await CourseModel.updateOne(
+            { 
+              _id: courseId, 
+              "finalTest._id": finalTestId,
+              "finalTest.tests._id": questionId 
+            },
+            { 
+              $push: { 
+                "finalTest.$[ft].tests.$[q].answers": answerData
+              } 
+            },
+            { 
+              arrayFilters: [
+                { "ft._id": finalTestId },
+                { "q._id": questionId }
+              ] 
+            }
+          );
+        } catch (err) {
+          console.error("Error saving answer:", err);
+        }
+      }
+
+      // Tính phần trăm điểm bài test
+      const finalTestPercentage = totalMaxScore > 0 ? 
+        (totalScore / totalMaxScore) * 100 : 0;
+
+      // --- Tính điểm tổng hợp cả khóa học ---
+      
+      let totalQuizScore = 0;
+      let totalQuizMaxScore = 0;
+      
+      course.courseData.forEach((data: any) => {
+        data.quiz.forEach((question: any) => {
+          const userAnswers = question.answers.filter((ans: any) => 
+            ans.user && ans.user._id.toString() === userId.toString()
+          );
+          
+          const latestAnswer = userAnswers.reduce((latest: any, current: any) => 
+            latest && latest.createdAt > current.createdAt ? latest : current, 
+            null
+          );
+          
+          const score = latestAnswer ? latestAnswer.score : 0;
+          const maxScore = question.maxScore || 10;
+          
+          totalQuizScore += score;
+          totalQuizMaxScore += maxScore;
+        });
+      });
+      
+      const quizPercentage = totalQuizMaxScore > 0 ? 
+        (totalQuizScore / totalQuizMaxScore) * 100 : 0;
+      
+      const quizWeight = course.quizWeight || 20;
+      const finalTestWeight = course.finalTestWeight || 80;
+      
+      const weightedFinalScore = 
+        (quizPercentage * quizWeight / 100) + 
+        (finalTestPercentage * finalTestWeight / 100);
+      
+      const passingGrade = course.passingGrade || 50;
+      const hasPassed = weightedFinalScore >= passingGrade;
+      const testStatus = hasPassed ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED;
+      
+      const existingScore = await userScoreModel.findOne({ user: userId, courseId });
+      const isFirstTimePassing = !existingScore || existingScore.testCourseStatus !== TEST_COURSE_STATUS.PASSED;
+      
+      await userScoreModel.deleteOne({ user: userId, courseId });
+      
+      await userScoreModel.create({
+        user: userId,
+        courseId,
+        finalScore: weightedFinalScore,
+        testCourseStatus: testStatus,
+      });
+      
+      // await NotificationModel.create({
+      //   user: userId,
+      //   title: hasPassed ? 'Congratulations! Course Completed' : 'Course Test Result',
+      //   message: hasPassed 
+      //     ? `You have successfully passed the course "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%!`
+      //     : `You have completed the tests for "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%. Try again to achieve a passing score of ${passingGrade}%.`,
+      // });
+      
+      if (hasPassed && isFirstTimePassing) {
+        try {
+          const user = await userModel.findById(userId);
+          
+          if (user && user.email) {
+            const mailData = {
+              course: {
+                _id: course._id.toString().slice(0, 6),
+                name: course.name,
+                score: weightedFinalScore.toFixed(1),
+                passingGrade: passingGrade,
+                quizScore: quizPercentage.toFixed(1),
+                finalTestScore: finalTestPercentage.toFixed(1),
+                completionDate: new Date().toLocaleDateString('vi-VN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }),
+              },
+              user: {
+                name: user.name || user.email.split('@')[0],
+              }
+            };
+            
+            // Gửi email chúc mừng
+            await sendMail({
+              email: user.email,
+              subject: `Congratulations on Completing "${course.name}"!`,
+              template: 'course-completion.ejs',
+              data: mailData,
+            });
+          }
+        } catch (emailError) {
+          console.error('Error sending completion email:', emailError);
+        }
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          courseId: course._id,
+          courseName: course.name,
+          finalScore: weightedFinalScore,
+          quizScore: quizPercentage,
+          testScore: finalTestPercentage,
+          correctAnswers: correctAnswersCount,
+          totalQuestions: answers.length,
+          weightedDetails: {
+            quizContribution: quizWeight.toString(),
+            testContribution: finalTestWeight.toString(),
+          },
+          passingGrade: passingGrade,
+          passed: hasPassed,
+          status: testStatus,
+          isFirstTimePassing: isFirstTimePassing,
+        }
+      });
+    } catch (error: any) {
+      console.error("Submit final test error:", error);
       return next(new ErrorHandler(error.message, 500));
     }
   }

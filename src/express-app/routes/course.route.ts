@@ -1,4 +1,3 @@
-// import express from "express";
 const express = require('express');
 
 import {
@@ -27,15 +26,20 @@ import {
   approveCourse,
   rejectCourse,
   uploadFinalTest,
-  approveCourseFinalTest,
-  rejectCourseFinalTest,
+  // approveCourseFinalTest,
+  // rejectCourseFinalTest,
   getPendingFinalTest,
   getCoursesByCategory,
-  calculateFinalTestScore,
-  getUserScores,
-  getMyUserScores,
-  getUsersByCourseId,
+  // calculateFinalTestScore,
+  getAllCoursesByUser,
+  getCourseByInstructor,
+  getFinalTests,
+  getAllCoursesFinalTest,
+  deleteFinalTest,
+  editFinalTestById,
+  getFinalTestById,
   getUsersInMyCourses,
+  submitFinalTest,
 } from '../course/controllers';
 import { authorizeRoles, isAuthenticated } from '../middleware/auth';
 import { updateAccessToken } from '../user/controllers';
@@ -56,6 +60,14 @@ courseRouter.put(
   isAuthenticated,
   authorizeRoles('ADMIN'),
   editCourse,
+);
+
+courseRouter.get(
+  '/get-course-by-instructor/:id',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('INSTRUCTOR'),
+  getCourseByInstructor,
 );
 
 courseRouter.get('/get-course/:id', getSingleCourse);
@@ -103,6 +115,14 @@ courseRouter.put(
   addAnswerQuiz,
 );
 
+courseRouter.put(
+  '/add-answer-final-test',
+  updateAccessToken,
+  isAuthenticated,
+  submitFinalTest,
+);
+
+
 courseRouter.get(
   '/quiz/:contentId',
   updateAccessToken,
@@ -117,7 +137,7 @@ courseRouter.put(
 );
 
 courseRouter.get(
-  '/get-all-courses',
+  '/admin/get-all-courses',
   updateAccessToken,
   isAuthenticated,
   authorizeRoles('ADMIN'),
@@ -176,29 +196,69 @@ courseRouter.put(
   rejectCourse,
 );
 
+courseRouter.get(
+  '/get-all-courses',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN','INSTRUCTOR'),
+  getAllCoursesFinalTest,
+);
+
 courseRouter.post(
-  '/final-test',
-  // updateAccessToken,
-  // isAuthenticated,
-  // authorizeRoles('ADMIN'),
+  '/final-test/:id',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN','INSTRUCTOR'),
   uploadFinalTest,
 );
 
-courseRouter.put(
-  '/admin/final-test/:id/approve',
-  // updateAccessToken,
-  // isAuthenticated,
+courseRouter.get(
+  '/final-test/:id',
+  updateAccessToken,
+  isAuthenticated,
   // authorizeRoles('ADMIN'),
-  approveCourseFinalTest,
+  getFinalTests,
 );
 
-courseRouter.put(
-  '/admin/final-test/:id/reject',
-  // updateAccessToken,
-  // isAuthenticated,
+courseRouter.get(
+  '/final-test-by-id/:id',
+  updateAccessToken,
+  isAuthenticated,
   // authorizeRoles('ADMIN'),
-  rejectCourseFinalTest,
+  getFinalTestById,
 );
+
+courseRouter.delete(
+  '/final-test/delete/:id',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN','INSTRUCTOR'),
+  deleteFinalTest,
+);
+
+courseRouter.patch(
+  '/final-test/edit/:id',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('ADMIN','INSTRUCTOR'),
+  editFinalTestById,
+);
+
+// courseRouter.put(
+//   '/admin/final-test/:id/approve',
+//   // updateAccessToken,
+//   // isAuthenticated,
+//   // authorizeRoles('ADMIN'),
+//   approveCourseFinalTest,
+// );
+
+// courseRouter.put(
+//   '/admin/final-test/:id/reject',
+//   // updateAccessToken,
+//   // isAuthenticated,
+//   // authorizeRoles('ADMIN'),
+//   rejectCourseFinalTest,
+// );
 
 courseRouter.get(
   '/admin/final-test/pending-review',
@@ -209,32 +269,26 @@ courseRouter.get(
 );
 
 courseRouter.get(
-  '/final-test/score/:courseId',
-  updateAccessToken,
-  isAuthenticated,
-  calculateFinalTestScore,
-);
-
-courseRouter.get(
   '/admin/user-scores/:userId',
   updateAccessToken,
   isAuthenticated,
-  getUserScores,
-);
+  getUserCourses
+)
 
 courseRouter.get(
   '/user-scores',
   updateAccessToken,
   isAuthenticated,
-  getMyUserScores,
-);
+  getUserCourses
+)
 
 courseRouter.get(
-  '/admin/users/:courseId',
-  // updateAccessToken,
-  // isAuthenticated,
-  // authorizeRoles('ADMIN'),
-  getUsersByCourseId
+  '/get-courses-overview',
+  updateAccessToken,
+  isAuthenticated,
+  authorizeRoles('INSTRUCTOR'),
+
+  getAllCoursesByUser,
 );
 
 courseRouter.get(
@@ -244,6 +298,8 @@ courseRouter.get(
   authorizeRoles('ADMIN', 'INSTRUCTOR'),
   getUsersInMyCourses
 );
+
+
 // courseRouter.get('/get-user-quiz-scores',updateAccessToken, isAuthenticated, getUserQuizScores);
 
-// export default courseRouter;
+export default courseRouter;
