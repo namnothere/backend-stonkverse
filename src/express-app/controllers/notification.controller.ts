@@ -9,19 +9,10 @@ const cron = require('node-cron');
 export const getAllNotifications = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userRole = req.user?.role;
-      let findCondition = {};
-      
-      if (userRole !== "ADMIN") {
-        findCondition = { userId: req.user?._id };
-      }
-      // console.log("Find condition:", findCondition);
-      
-      const notifications = await NotificationModel.find(findCondition)
-        .sort({ createdAt: -1 });
-      
-      // console.log("Notifications count:", notifications.length);
-      
+      const notifications = await NotificationModel.find().sort({
+        createdAt: -1,
+      });
+
       res.status(200).json({ success: true, notifications });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));

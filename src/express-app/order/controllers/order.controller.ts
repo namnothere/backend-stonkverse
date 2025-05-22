@@ -173,7 +173,13 @@ export const createOrder = CatchAsyncErrors(
         course.purchased += 1;
       }
 
-      await course.save();
+      course.save();
+
+      // try {
+      //   await course.save().then();
+      // } catch (error: any) {
+      //   // skip
+      // }
 
       newOrder(data, res, next);
     } catch (error: any) {
