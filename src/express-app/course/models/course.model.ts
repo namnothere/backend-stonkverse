@@ -1,6 +1,5 @@
 import mongoose, { Document, Model, ObjectId, Schema, Types } from 'mongoose';
 import { IUser } from '../../user/models';
-import { IFinalTestSetting } from 'src/setting/entities/setting.entity';
 
 export interface IReply extends Document {
   _id: Types.ObjectId;
@@ -72,7 +71,7 @@ export interface ICourseData extends Document {
   questions: IQuestion[];
   quiz: IQuestionQuiz[];
   percentAccount: number;
-  quizWeight: number;
+  isFinalTest: boolean;
   status: COURSE_DATA_STATUS;
 }
 
@@ -115,70 +114,6 @@ const questionQuizSchema = new Schema<IQuestionQuiz>(
   },
   { timestamps: true },
 );
-export type QuestionType = "single" | "multiple" | "fillBlank";
-
-export interface IAnswerFinalTest extends Document {
-  _id: Types.ObjectId;
-  user: IUser;
-  answer: string[];
-  imageUrl?: string;
-  score: number;
-  createdAt: Date;
-}
-
-export interface ITitleFinalTest extends Document {
-  _id: Types.ObjectId;
-  user: IUser;
-  title?: string;
-  description?: string;
-  imageUrl?: string;
-  answers: IAnswerFinalTest[];
-  correctAnswer: string[];
-  mockAnswer: string[];
-  maxScore: number;
-  type: QuestionType;
-  createdAt: Date;
-}
-
-export interface IFinalTest extends Document {
-  _id: Types.ObjectId;
-  user?: IUser;
-  title: string;
-  description: string;
-  tests: ITitleFinalTest[];
-  score: Number;
-  settings: IFinalTestSetting,
-};
-
-const answerFinalTestSchema = new Schema<IAnswerFinalTest>({
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
-  answer: { type: [String], required: true },
-  imageUrl: { type: String },
-  score: { type: Number, default: 0 },
-}, { timestamps: true });
-
-
-const titleFinalTestSchema = new Schema<ITitleFinalTest>({
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
-  title: { type: String },
-  // description: { type: String },
-  imageUrl: { type: String },
-  answers: [answerFinalTestSchema],
-  correctAnswer: { type: [String], required: true },
-  mockAnswer: { type: [String], required: true },
-  maxScore: { type: Number, default: 10 },
-  type: { type: String },
-}, { timestamps: true });
-
-const finalTestSchema = new Schema<IFinalTest>({
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
-  title: { type: String },
-  description: { type: String },
-  tests: [titleFinalTestSchema],
-  score: { type: Number, default: 0 },
-  settings: { type: Schema.Types.ObjectId, ref: 'FinalTestSetting' },
-}, { timestamps: true });
-
 
 export interface ICourse extends Document {
   _id: ObjectId;
@@ -208,11 +143,6 @@ export interface ICourse extends Document {
   purchased?: number;
   status: COURSE_STATUS;
   createdBy: Types.ObjectId;
-  finalTest: IFinalTest[];
-  isFinalTest: boolean;
-  quizWeight: number;
-  finalTestWeight: number;
-  passingGrade: number;
 }
 
 const replySchema = new Schema<IReply>(
@@ -248,6 +178,7 @@ const commentSchema = new Schema<IQuestion>(
 const courseDataSchema = new Schema<ICourseData>({
   videoUrl: String,
   videoThumbnail: Object,
+
   title: String,
   videoSection: String,
   description: String,
@@ -256,8 +187,10 @@ const courseDataSchema = new Schema<ICourseData>({
   suggestion: String,
   questions: [commentSchema],
   quiz: [questionQuizSchema],
-  quizWeight: { type: Number, default: 1 },
+
   percentAccount: { type: Number, default: 0 },
+  isFinalTest: { type: Boolean, default: false },
+
   status: {
     type: String,
     enum: COURSE_DATA_STATUS,
@@ -302,20 +235,15 @@ const courseSchema = new Schema<ICourse>(
     forWho: [{ title: String }],
     reviews: [reviewSchema],
     courseData: [courseDataSchema],
-    finalTest: [finalTestSchema],
     ratings: { type: Number, default: 0 },
     purchased: { type: Number, default: 0 },
+    // isApproved: { type: Boolean, default: false },
     status: {
       type: String,
       enum: COURSE_STATUS,
       default: COURSE_STATUS.PENDING_REVIEW,
     },
-    quizWeight: { type: Number, default: 20 }, // 20% cho quiz
-    finalTestWeight: { type: Number, default: 80 }, // 80% cho bài thi cuối kỳ
-    passingGrade: { type: Number, default: 50 }, // 50% điểm đạt
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    isFinalTest: { type: Boolean, default: false },
-
   },
   { timestamps: true },
 );

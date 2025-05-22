@@ -58,7 +58,7 @@ app.use((req, res, next) => {
 //   legacyHeaders: false,
 // });
 
-app.use(limiter);
+// app.use(limiter);
 app.use(ErrorMiddleware);
 
 // // Routers
