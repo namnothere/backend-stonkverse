@@ -1,3 +1,4 @@
+// import express from "express";
 const express = require('express');
 
 import {
@@ -38,6 +39,8 @@ import {
   deleteFinalTest,
   editFinalTestById,
   getFinalTestById,
+  calculateFinalTestScore,
+  addAnswerFinalTest,
   getUsersInMyCourses,
   submitFinalTest,
 } from '../course/controllers';
@@ -267,6 +270,13 @@ courseRouter.get(
   // authorizeRoles('ADMIN'),
   getPendingFinalTest,
 );
+// submit finaltest btn
+courseRouter.post(
+  '/final-test/score/:courseId',
+  updateAccessToken,
+  isAuthenticated,
+  calculateFinalTestScore
+)
 
 courseRouter.get(
   '/admin/user-scores/:userId',

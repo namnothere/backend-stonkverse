@@ -310,9 +310,9 @@ const courseSchema = new Schema<ICourse>(
       enum: COURSE_STATUS,
       default: COURSE_STATUS.PENDING_REVIEW,
     },
-    quizWeight: { type: Number, default: 20 }, // 20% cho quiz
-    finalTestWeight: { type: Number, default: 80 }, // 80% cho bài thi cuối kỳ
-    passingGrade: { type: Number, default: 50 }, // 50% điểm đạt
+    quizWeight: { type: Number, default: 20 }, 
+    finalTestWeight: { type: Number, default: 80 }, 
+    passingGrade: { type: Number, default: 50 }, 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isFinalTest: { type: Boolean, default: false },
 

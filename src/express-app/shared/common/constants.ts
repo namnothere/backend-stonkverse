@@ -20,5 +20,4 @@ export enum MESSAGES {
   FINAL_TEST_EXISTS = 'Final test already exists',
   FINAL_TEST_DELETED_SUCCESSFULLY = 'Final test deleted successfully',
   FINAL_TEST_EDITED_SUCCESSFULLY = 'Final test edited successfully'
-
 }

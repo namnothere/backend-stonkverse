@@ -19,7 +19,8 @@ export const FinalTestSettingSchema = new Schema<IFinalTestSetting>(
   },
   { timestamps: true },
 );
+
 export const FinalTestSettingModel = model<IFinalTestSetting>(
-  'FinalTestSetting', 
+  'FinalTestSetting',
   FinalTestSettingSchema,
 );
