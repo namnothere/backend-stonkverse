@@ -331,6 +331,19 @@ export const addQuestion = CatchAsyncErrors(
         return next(new ErrorHandler('Invalid content id', 400));
       }
 
+      const isContentSafe = await checkContent([title, question].join('\n\n'));
+
+      console.log('isContentSafe question :', isContentSafe);
+
+      if (!isContentSafe) {
+        return next(
+          new ErrorHandler(
+            'Cannot create answer with inappropriate content',
+            400,
+          ),
+        );
+      }
+
       const newQuestion: any = {
         user: req.user?._id,
         title,
@@ -339,8 +352,6 @@ export const addQuestion = CatchAsyncErrors(
       };
 
       courseContent.questions.push(newQuestion);
-
-      // [LATER]
 
       await course?.save();
 
@@ -551,48 +562,48 @@ export const addAnswerFinalTest = CatchAsyncErrors(
 
       answers.forEach((answerObj) => {
         const { questionId, answer } = answerObj;
-        
+
         // Find the question in the final test
         const question = finalTest.tests.find((q: any) => q._id.equals(questionId));
-        
+
         if (!question) {
           return;
         }
 
         // Calculate score based on question type and correctness
         let score = 0;
-        
+
         if (question.type === "single" || question.type === "fillBlank") {
           // For single choice or fill in blank questions
           score = question.correctAnswer.includes(answer[0]) ? question.maxScore : 0;
         } else if (question.type === "multiple") {
           // For multiple choice questions
-          const correctAll = 
+          const correctAll =
             question.correctAnswer.length === answer.length &&
             question.correctAnswer.every((val: string) => answer.includes(val)) &&
             answer.every((val: string) => question.correctAnswer.includes(val));
-            
+
           if (correctAll) {
             score = question.maxScore;
           } else {
             // Calculate partial score for partially correct answers
-            const correctCount = answer.filter((ans: string) => 
+            const correctCount = answer.filter((ans: string) =>
               question.correctAnswer.includes(ans)).length;
-            
+
             // Deduct points for incorrect selections
-            const incorrectCount = answer.filter((ans: string) => 
+            const incorrectCount = answer.filter((ans: string) =>
               !question.correctAnswer.includes(ans)).length;
-            
+
             // Calculate score based on correct - incorrect (min 0)
-            const partialScore = Math.max(0, 
-              (correctCount - incorrectCount) / 
+            const partialScore = Math.max(0,
+              (correctCount - incorrectCount) /
               question.correctAnswer.length * question.maxScore
             );
-            
+
             score = partialScore;
           }
         }
-        
+
         totalScore += score;
         detailedScores[questionId] = score;
 
@@ -608,10 +619,10 @@ export const addAnswerFinalTest = CatchAsyncErrors(
       await course.save();
 
       // Return the result
-      res.status(200).json({ 
-        success: true, 
-        totalScore, 
-        detailedScores 
+      res.status(200).json({
+        success: true,
+        totalScore,
+        detailedScores
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
@@ -695,6 +706,19 @@ export const addReview = CatchAsyncErrors(
 
       if (course) {
         const { review, rating } = req.body;
+        
+        const isContentSafe = await checkContent(review);
+
+        console.log('isContentSafe review:', isContentSafe);
+
+        if (!isContentSafe) {
+          return next(
+            new ErrorHandler(
+              'Cannot create answer with inappropriate content',
+              400,
+            ),
+          );
+        }
 
         const reviewData: any = {
           user: req.user?._id,
@@ -1444,33 +1468,33 @@ const calculateCourseScores = (course: ICourse, userId: string) => {
   let totalQuizScore = 0;
   let totalQuizMaxScore = 0;
   const quizScoresDetails: QuizScoreDetail[] = [];
-  
+
   // Process regular quiz scores from courseData
   course.courseData.forEach((data: ICourseData) => {
     data.quiz.forEach((question: IQuestionQuiz) => {
       const latestAnswer = getLatestAnswer(question.answers, userId);
       const score = latestAnswer ? latestAnswer.score : 0;
       const maxScore = question.maxScore;
-      
+
       totalQuizScore += score;
       totalQuizMaxScore += maxScore;
-      
-      quizScoresDetails.push({ 
-        title: question.title || '', 
+
+      quizScoresDetails.push({
+        title: question.title || '',
         score,
         maxScore,
         type: 'quiz'
       });
     });
   });
-  
+
   // Calculate quiz percentage
   const quizPercentage = totalQuizMaxScore > 0 ? (totalQuizScore / totalQuizMaxScore) * 100 : 0;
-  
+
   // Final test scores calculation
   let totalFinalScore = 0;
   let totalFinalMaxScore = 0;
-  
+
   // Process final test scores from the finalTest array
   if (course.finalTest && course.finalTest.length > 0) {
     course.finalTest.forEach((finalTest: IFinalTest) => {
@@ -1478,11 +1502,11 @@ const calculateCourseScores = (course: ICourse, userId: string) => {
         const latestAnswer = getLatestFinalTestAnswer(test.answers, userId);
         const score = latestAnswer ? latestAnswer.score : 0;
         const maxScore = test.maxScore;
-        
+
         totalFinalScore += score;
         totalFinalMaxScore += maxScore;
-        
-        quizScoresDetails.push({ 
+
+        quizScoresDetails.push({
           title: test.title || finalTest.title || '',
           score,
           maxScore,
@@ -1491,19 +1515,19 @@ const calculateCourseScores = (course: ICourse, userId: string) => {
       });
     });
   }
-  
+
   // Calculate final test percentage
   const finalTestPercentage = totalFinalMaxScore > 0 ? (totalFinalScore / totalFinalMaxScore) * 100 : 0;
-  
+
   // Use course-defined weights instead of hardcoded values
   const quizWeight = course.quizWeight || 20;
   const finalTestWeight = course.finalTestWeight || 80;
-  
+
   // Calculate weighted final score
   const weightedFinalScore = (quizPercentage * quizWeight / 100) + (finalTestPercentage * finalTestWeight / 100);
-  
-  return { 
-    totalScore: weightedFinalScore, 
+
+  return {
+    totalScore: weightedFinalScore,
     totalMaxScore: 100,
     quizScoresDetails,
     quizPercentage,
@@ -1516,58 +1540,58 @@ export const calculateFinalTestScore = CatchAsyncErrors(
     try {
       const { courseId } = req.params;
       const userId = req.user?._id;
-      
+
       // Populate both courseData.quiz.answers.user AND finalTest.tests.answers.user
       const course = await CourseModel.findById(courseId)
         .populate('courseData.quiz.answers.user')
         .populate('finalTest.tests.answers.user');
-      
+
       if (!course) {
         return res
           .status(404)
           .json({ success: false, message: 'Course not found' });
       }
-      
+
       if (!userId) {
         return res
           .status(401)
           .json({ success: false, message: 'Unauthorized' });
       }
-      
+
       const user = await userModel.findById(userId);
-      
+
       if (!user) {
         return res
           .status(404)
           .json({ success: false, message: 'User not found' });
       }
-      
+
       const { totalScore, totalMaxScore, quizScoresDetails, quizPercentage, finalTestPercentage } = calculateCourseScores(
         course,
         userId.toString(),
       );
-      
+
       // Use course-defined passing grade instead of hardcoded value
       const passingGrade = course.passingGrade || 50;
-      
+
       // Determine if user passed or failed
       const hasPassed = totalScore >= passingGrade;
       const testStatus = hasPassed ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED;
-      
+
       // Find if there's an existing score to determine if this is first time passing
       const existingScore = await userScoreModel.findOne({ user: userId, courseId });
       const isFirstTimePassing = !existingScore || existingScore.testCourseStatus !== TEST_COURSE_STATUS.PASSED;
-      
+
       // Update userScore
       await userScoreModel.deleteOne({ user: userId, courseId });
-      
+
       await userScoreModel.create({
         user: userId,
         courseId,
         finalScore: totalScore,
         testCourseStatus: testStatus,
       });
-      
+
       // Create notification for course completion
       // await NotificationModel.create({
       //   user: userId,
@@ -1576,7 +1600,7 @@ export const calculateFinalTestScore = CatchAsyncErrors(
       //     ? `You have successfully passed the course "${course.name}" with a score of ${totalScore.toFixed(1)}%!`
       //     : `You have completed the tests for "${course.name}" with a score of ${totalScore.toFixed(1)}%. Try again to achieve a passing score of ${passingGrade}%.`,
       // });
-      
+
       // If user passed and it's their first time passing, send email
       if (hasPassed && isFirstTimePassing) {
         try {
@@ -1599,7 +1623,7 @@ export const calculateFinalTestScore = CatchAsyncErrors(
               name: user.name || user.email.split('@')[0],
             }
           };
-          
+
           // Send congratulatory email
           await sendMail({
             email: user.email,
@@ -1607,12 +1631,12 @@ export const calculateFinalTestScore = CatchAsyncErrors(
             template: 'course-completion.ejs',
             data: mailData,
           });
-          
+
         } catch (error: any) {
           console.error('Error sending course completion email:', error.message);
         }
       }
-      
+
       res.status(200).json({
         success: true,
         courseId: course._id,
@@ -1621,7 +1645,7 @@ export const calculateFinalTestScore = CatchAsyncErrors(
         totalMaxScore,
         quizPercentage,
         finalTestPercentage,
-        completionRate: totalScore, 
+        completionRate: totalScore,
         quizScoresDetails,
         passingGrade: course.passingGrade,
         status: testStatus,
@@ -2301,7 +2325,7 @@ export const submitFinalTest = CatchAsyncErrors(
       }
 
       // Tìm bài kiểm tra cuối cùng
-      const finalTest = course.finalTest.find((test: any) => 
+      const finalTest = course.finalTest.find((test: any) =>
         test._id.toString() === finalTestId
       );
 
@@ -2317,19 +2341,19 @@ export const submitFinalTest = CatchAsyncErrors(
       // Xử lý từng câu trả lời
       for (const answerObj of answers) {
         const { questionId, answer } = answerObj;
-        
+
         // Tìm câu hỏi
-        const question = finalTest.tests.find((q: any) => 
+        const question = finalTest.tests.find((q: any) =>
           q._id.toString() === questionId
         );
-        
+
         if (!question) continue;
 
         // Tính điểm
         let score = 0;
         const maxScore = question.maxScore || 10;
         totalMaxScore += maxScore;
-        
+
         if (question.type === "single" || question.type === "fillBlank") {
           // Cho câu hỏi một lựa chọn hoặc điền vào chỗ trống
           if (answer.length === 1 && question.correctAnswer.includes(answer[0])) {
@@ -2338,38 +2362,38 @@ export const submitFinalTest = CatchAsyncErrors(
           }
         } else if (question.type === "multiple") {
           // Cho câu hỏi nhiều lựa chọn
-          const isFullyCorrect = 
+          const isFullyCorrect =
             question.correctAnswer.length === answer.length &&
             question.correctAnswer.every((val: string) => answer.includes(val)) &&
             answer.every((val: string) => question.correctAnswer.includes(val));
-            
+
           if (isFullyCorrect) {
             score = maxScore;
             correctAnswersCount++;
           } else {
             // Điểm một phần cho câu trả lời đúng một phần
-            const correctCount = answer.filter((ans: string) => 
+            const correctCount = answer.filter((ans: string) =>
               question.correctAnswer.includes(ans)).length;
-            
+
             // Trừ điểm cho các lựa chọn sai
-            const incorrectCount = answer.filter((ans: string) => 
+            const incorrectCount = answer.filter((ans: string) =>
               !question.correctAnswer.includes(ans)).length;
-            
+
             // Tính điểm một phần
-            score = Math.max(0, 
-              (correctCount - incorrectCount) / 
+            score = Math.max(0,
+              (correctCount - incorrectCount) /
               question.correctAnswer.length * maxScore
             );
-            
+
             // Đếm là đúng nếu đạt trên 50% điểm
             if (score >= maxScore / 2) {
               correctAnswersCount++;
             }
           }
         }
-        
+
         totalScore += score;
-        
+
         try {
           const answerData = {
             user: userId,
@@ -2379,21 +2403,21 @@ export const submitFinalTest = CatchAsyncErrors(
           };
 
           await CourseModel.updateOne(
-            { 
-              _id: courseId, 
+            {
+              _id: courseId,
               "finalTest._id": finalTestId,
-              "finalTest.tests._id": questionId 
+              "finalTest.tests._id": questionId
             },
-            { 
-              $push: { 
+            {
+              $push: {
                 "finalTest.$[ft].tests.$[q].answers": answerData
-              } 
+              }
             },
-            { 
+            {
               arrayFilters: [
                 { "ft._id": finalTestId },
                 { "q._id": questionId }
-              ] 
+              ]
             }
           );
         } catch (err) {
@@ -2402,59 +2426,59 @@ export const submitFinalTest = CatchAsyncErrors(
       }
 
       // Tính phần trăm điểm bài test
-      const finalTestPercentage = totalMaxScore > 0 ? 
+      const finalTestPercentage = totalMaxScore > 0 ?
         (totalScore / totalMaxScore) * 100 : 0;
 
       // --- Tính điểm tổng hợp cả khóa học ---
-      
+
       let totalQuizScore = 0;
       let totalQuizMaxScore = 0;
-      
+
       course.courseData.forEach((data: any) => {
         data.quiz.forEach((question: any) => {
-          const userAnswers = question.answers.filter((ans: any) => 
+          const userAnswers = question.answers.filter((ans: any) =>
             ans.user && ans.user._id.toString() === userId.toString()
           );
-          
-          const latestAnswer = userAnswers.reduce((latest: any, current: any) => 
-            latest && latest.createdAt > current.createdAt ? latest : current, 
+
+          const latestAnswer = userAnswers.reduce((latest: any, current: any) =>
+            latest && latest.createdAt > current.createdAt ? latest : current,
             null
           );
-          
+
           const score = latestAnswer ? latestAnswer.score : 0;
           const maxScore = question.maxScore || 10;
-          
+
           totalQuizScore += score;
           totalQuizMaxScore += maxScore;
         });
       });
-      
-      const quizPercentage = totalQuizMaxScore > 0 ? 
+
+      const quizPercentage = totalQuizMaxScore > 0 ?
         (totalQuizScore / totalQuizMaxScore) * 100 : 0;
-      
+
       const quizWeight = course.quizWeight || 20;
       const finalTestWeight = course.finalTestWeight || 80;
-      
-      const weightedFinalScore = 
-        (quizPercentage * quizWeight / 100) + 
+
+      const weightedFinalScore =
+        (quizPercentage * quizWeight / 100) +
         (finalTestPercentage * finalTestWeight / 100);
-      
+
       const passingGrade = course.passingGrade || 50;
       const hasPassed = weightedFinalScore >= passingGrade;
       const testStatus = hasPassed ? TEST_COURSE_STATUS.PASSED : TEST_COURSE_STATUS.FAILED;
-      
+
       const existingScore = await userScoreModel.findOne({ user: userId, courseId });
       const isFirstTimePassing = !existingScore || existingScore.testCourseStatus !== TEST_COURSE_STATUS.PASSED;
-      
+
       await userScoreModel.deleteOne({ user: userId, courseId });
-      
+
       await userScoreModel.create({
         user: userId,
         courseId,
         finalScore: weightedFinalScore,
         testCourseStatus: testStatus,
       });
-      
+
       // await NotificationModel.create({
       //   user: userId,
       //   title: hasPassed ? 'Congratulations! Course Completed' : 'Course Test Result',
@@ -2462,11 +2486,11 @@ export const submitFinalTest = CatchAsyncErrors(
       //     ? `You have successfully passed the course "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%!`
       //     : `You have completed the tests for "${course.name}" with a score of ${weightedFinalScore.toFixed(1)}%. Try again to achieve a passing score of ${passingGrade}%.`,
       // });
-      
+
       if (hasPassed && isFirstTimePassing) {
         try {
           const user = await userModel.findById(userId);
-          
+
           if (user && user.email) {
             const mailData = {
               course: {
@@ -2486,7 +2510,7 @@ export const submitFinalTest = CatchAsyncErrors(
                 name: user.name || user.email.split('@')[0],
               }
             };
-            
+
             // Gửi email chúc mừng
             await sendMail({
               email: user.email,
@@ -2499,7 +2523,7 @@ export const submitFinalTest = CatchAsyncErrors(
           console.error('Error sending completion email:', emailError);
         }
       }
-      
+
       res.status(200).json({
         success: true,
         data: {
