@@ -4,7 +4,7 @@ export interface INotification extends Document {
   title: string;
   message: string;
   status: string;
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId;
 }
 
 const notificationSchema = new Schema<INotification>(
@@ -25,7 +25,6 @@ const notificationSchema = new Schema<INotification>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
     },
   },
   { timestamps: true },

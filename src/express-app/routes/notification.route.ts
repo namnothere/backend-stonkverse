@@ -22,7 +22,7 @@ notificationRouter.put(
   '/update-notification/:id',
   updateAccessToken,
   isAuthenticated,
-  authorizeRoles('ADMIN'),
+  authorizeRoles('ADMIN', 'INSTRUCTOR'),
   updateNotification,
 );
 
