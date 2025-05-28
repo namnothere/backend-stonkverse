@@ -9,14 +9,15 @@ const cron = require('node-cron');
 export const getAllNotifications = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userRole = req.user?.role;
-      let findCondition = {};
+      // const userRole = req.user?.role;
+      // let findCondition = {};
       
-      if (userRole !== "ADMIN") {
-        findCondition = { userId: req.user?._id };
-      }
+      // if (userRole !== "ADMIN") {
+      //   findCondition = { userId: req.user?._id };
+      // }
       // console.log("Find condition:", findCondition);
-      
+      const findCondition = { userId: req.user?._id };
+
       const notifications = await NotificationModel.find(findCondition)
         .sort({ createdAt: -1 });
       

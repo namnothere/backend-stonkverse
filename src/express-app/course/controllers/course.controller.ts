@@ -418,27 +418,27 @@ export const addAnswer = CatchAsyncErrors(
 
       await course?.save();
 
-      // if (req.user?._id === question.user._id) {
-      //   await NotificationModel.create({
-      //     user: req.user?._id,
-      //     title: "New Question Reply Received",
-      //     message: `You have a new question reply in ${courseContent.title}`,
-      //   });
-      // } else {
+      if (req.user?._id === question.user._id) {
+        await NotificationModel.create({
+          user: req.user?._id,
+          title: "New Question Reply Received",
+          message: `You have a new question reply in ${courseContent.title}`,
+        });
+      } else {
 
-      //   const data = { name: question.user.name, title: courseContent.title };
+        const data = { name: question.user.name, title: courseContent.title };
 
-      //   try {
-      //     await sendMail({
-      //       email: question.user.email,
-      //       subject: "Question Reply",
-      //       template: "question-reply.ejs",
-      //       data,
-      //     });
-      //   } catch (error: any) {
-      //     return next(new ErrorHandler(error.message, 500));
-      //   }
-      // }
+        try {
+          await sendMail({
+            email: question.user.email,
+            subject: "Question Reply",
+            template: "question-reply.ejs",
+            data,
+          });
+        } catch (error: any) {
+          return next(new ErrorHandler(error.message, 500));
+        }
+      }
 
       res.status(200).json({ success: true, course });
     } catch (error: any) {
