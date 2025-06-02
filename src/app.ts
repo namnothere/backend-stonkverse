@@ -37,7 +37,9 @@ app.use(
     origin: [
       'http://localhost:3000',
       'https://frontend-stockverse-v1.vercel.app',
-      'https://frontend-stockverse-v1-28e5.vercel.app'
+      'https://frontend-stockverse-v1-28e5.vercel.app',
+      'https://frontend-stonkverse-nznr.vercel.app',
+      'https://frontend-stonkverse-v1-fvks.vercel.app'
     ],
     credentials: true,
   }),

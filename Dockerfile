@@ -28,4 +28,6 @@ COPY --from=builder /app/.env ./
 EXPOSE 8000
 
 # Start the application and keep container running
-CMD ["tail", "-f", "/dev/null"]
+# CMD ["tail", "-f", "/dev/null"]
+#  node dist/src/main
+CMD ["node", "dist/src/main"]

@@ -3,7 +3,7 @@ import { CourseModel } from '../models';
 
 import axios from 'axios';
 
-const PREDICT_LABEL_API_URL = 'http://127.0.0.1:8001/predict';
+const PREDICT_LABEL_API_URL = 'https://svm.immergreen.cc/predict';
 
 export const checkContent = async (input: string): Promise<boolean> => {
   try {

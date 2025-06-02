@@ -19,8 +19,8 @@ docker rmi ${DOCKER_USERNAME}/${IMAGE_NAME}:${VERSION} 2>/dev/null || true
 # Build the Docker image
 echo -e "${GREEN}Building Docker image...${NC}"
 docker buildx create --use
-docker buildx build --platform linux/arm64/v8 -t ${IMAGE_NAME}:${VERSION} --push .
-
+docker buildx build --platform linux/arm64/v8 -t ${DOCKER_USERNAME}/${IMAGE_NAME}:${VERSION} --push .
+# docker buildx build --platform linux/arm64/v8 -t aegis336/backend-stonkverse:latest --push .
 if [ $? -ne 0 ]; then
     echo -e "${RED}Docker build failed!${NC}"
     exit 1
