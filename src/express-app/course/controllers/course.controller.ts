@@ -21,10 +21,11 @@ import mongoose from 'mongoose';
 import { NotificationModel } from '../../models';
 import axios from 'axios';
 import { LayoutModel } from '../../layout/models';
-import { TEST_COURSE_STATUS, userModel, userScoreModel } from '../../user/models';
+import { learningProgressModel, TEST_COURSE_STATUS, userModel, userScoreModel } from '../../user/models';
 import { MESSAGES } from '../../shared/common';
 import { FinalTestSettingModel, IFinalTestSetting } from 'src/setting/entities/setting.entity';
 import { sendMail } from 'src/express-app/utils';
+import { isAuthenticated } from 'src/express-app/middleware';
 
 export const uploadCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -706,7 +707,7 @@ export const addReview = CatchAsyncErrors(
 
       if (course) {
         const { review, rating } = req.body;
-        
+
         const isContentSafe = await checkContent(review);
 
         console.log('isContentSafe review:', isContentSafe);
@@ -856,26 +857,66 @@ export const getAllCoursesFinalTest = CatchAsyncErrors(
   }
 );
 
-export const getUserCourses = CatchAsyncErrors(
-  async (req: Request, res: Response, next: NextFunction) => {
+export const getUserCourses = [isAuthenticated, CatchAsyncErrors(async (req, res, next) => {
     try {
+      const userId = req.user._id; 
       const { courseIds } = req.body;
+
       const courses = await CourseModel.find({
         _id: { $in: courseIds },
         status: 'APPROVED',
-
       })
-        .sort({
-          createdAt: -1,
-        })
-        .select('_id name purchased price estimatedPrice courseData thumbnail');
+        .sort({ createdAt: -1 })
+        .select('_id name purchased price estimatedPrice courseData finalTest isFinalTest thumbnail');
 
-      res.status(200).json({ success: true, courses });
+      const updatedCourses = await Promise.all(
+        courses.map(async (course) => {
+          const courseId = course._id;
+          const totalLessons = course.courseData.length;
+
+          const progressDoc = await learningProgressModel.findOne({
+            user: userId,
+            courseId: courseId,
+          }).lean();
+
+          const completedLessons = progressDoc?.progress?.length || 0;
+
+          let finalTestCompleted = false;
+          if (course.isFinalTest && course.finalTest && course.finalTest.length > 0) {
+            finalTestCompleted = course.finalTest.some(test => 
+              test.tests && test.tests.some(testItem => 
+                testItem.answers && testItem.answers.some(answer => 
+                  answer.user.toString() === userId.toString()
+                )
+              )
+            );
+          }
+
+          const totalParts = totalLessons + (course.isFinalTest ? 1 : 0);
+          const completedParts = completedLessons + (finalTestCompleted ? 1 : 0);
+          const percentAccount = totalParts > 0
+            ? Math.round((completedParts / totalParts) * 100)
+            : 0;
+
+          return {
+            ...course.toObject(),
+            percentAccount,
+            progressDetails: {
+              completedLessons,
+              totalLessons,
+              hasFinalTest: course.isFinalTest,
+              finalTestCompleted: !!finalTestCompleted,
+            }
+          };
+        })
+      );
+
+      res.status(200).json({ success: true, courses: updatedCourses });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }
-  },
-);
+  })
+];
 
 export const deleteCourse = CatchAsyncErrors(
   async (req: Request, res: Response, next: NextFunction) => {
