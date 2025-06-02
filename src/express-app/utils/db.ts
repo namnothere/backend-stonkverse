@@ -2,18 +2,22 @@ import mongoose from 'mongoose';
 
 require('dotenv').config();
 
-const dbUrl: string = process.env.DB_URI || '';
-
 const connectDB = async () => {
   try {
-    await mongoose.connect(dbUrl).then((data: any) => {
-      // console.log(
-      //   `Database connected successfully with ${data.connection.host}`
-      // );
-    });
+    if (mongoose.connection.readyState === 1) {
+      console.log('MongoDB is already connected');
+      return;
+    }
+    
+    const dbUrl: string = process.env.DB_URI || '';
+    if (!dbUrl) {
+      throw new Error('DB_URI is not defined in environment variables');
+    }
+    
+    await mongoose.connect(dbUrl);
+    console.log('MongoDB connected successfully');
   } catch (error: any) {
-    console.log(error.message);
-    setTimeout(connectDB, 5000);
+    console.error('MongoDB connection error:', error.message);
   }
 };
 

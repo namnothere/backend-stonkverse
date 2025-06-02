@@ -32,6 +32,7 @@ export const uploadCourse = CatchAsyncErrors(
       const { data } = req.body;
       const thumbnail = data.thumbnail;
       const curriculum = data.curriculum;
+      data.createdBy = req.user?._id;
 
       if (thumbnail) {
         const myCloud = await cloudinary.v2.uploader.upload(thumbnail, {

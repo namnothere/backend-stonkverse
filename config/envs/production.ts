@@ -1,5 +1,6 @@
 export const config = {
   db: {
+    uri: process.env.DB_URI || 'mongodb://127.0.0.1:27017/dbname',
     type: process.env.DB_TYPE || 'mysql',
     synchronize: false,
     logging: false,

@@ -20,7 +20,7 @@ export const accessTokenOptions = {
   expires: new Date(Date.now() + ACCESS_TOKEN_EXPIRE * 60 * 60 * 1000),
   maxAge: ACCESS_TOKEN_EXPIRE * 60 * 60 * 1000,
   httpOnly: true,
-  // sameSite: "None",
+  sameSite: "none" as const,
   secure: true,
 };
 
@@ -28,7 +28,7 @@ export const refreshTokenOptions = {
   expires: new Date(Date.now() + REFRESH_TOKEN_EXPIRE * 24 * 60 * 60 * 1000),
   maxAge: REFRESH_TOKEN_EXPIRE * 24 * 60 * 60 * 1000,
   httpOnly: true,
-  // sameSite: "None",
+  sameSite: "none" as const,
   secure: true,
 };
 
